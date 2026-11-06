@@ -1,0 +1,13 @@
+{
+  "prototype": {
+    "size": { "w": 8, "h": 8 },
+    "color": { "r": 255, "g": 80, "b": 80 },
+    "steering": {
+      "max_speed": 70,
+      "max_force": 120,
+      "seek_weight": 1.0,
+      "wander_strength": 0.4,
+      "wander_rate": 3.0
+    }
+  }
+}
