@@ -1,0 +1,10 @@
+{
+  "size": { "w": 16, "h": 16 },
+  "color": { "r": 80, "g": 160, "b": 255 },
+  "movement": {
+    "initial_speed": 0,
+    "max_speed": 60,
+    "acceleration": 15,
+    "start_direction": { "x": 0, "y": -1 }
+  }
+}
