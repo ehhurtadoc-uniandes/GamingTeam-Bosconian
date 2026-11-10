@@ -115,6 +115,18 @@ class TestEnemyState(unittest.TestCase):
             transform.pos.y %= WORLD_SIZE.y
         self.assertTrue(self.world.entity_exists(enemy))
 
+    def test_e_sobre_el_jugador_espera_en_aim_hasta_tener_direccion(self):
+        enemy = self._enemy(EnemyType.E, pos=(80, 40))
+        self._update(1 / 60)
+        self.assertEqual(self._state(enemy).state, EnemyState.AIM)
+        self.assertEqual(self._velocity(enemy).vel.length(), 0)
+        self.target = pygame.Vector2(120, 40)
+        self._update(1 / 60)
+        self.assertEqual(self._state(enemy).state, EnemyState.STRAIGHT)
+        self.assertAlmostEqual(self._velocity(enemy).vel.length(),
+                               self.enemies_info["E"]["steering"]["max_speed"])
+        self.assertGreater(self._velocity(enemy).vel.x, 0)
+
     def test_e_se_elimina_al_agotar_su_tiempo_recto(self):
         enemy = self._enemy(EnemyType.E)
         self._update(0)

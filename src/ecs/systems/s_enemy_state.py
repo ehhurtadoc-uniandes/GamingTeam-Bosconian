@@ -7,7 +7,7 @@ así que este sistema debe ejecutarse antes que él en cada frame.
 Transiciones:
 - I: CHASE --(duration)--> LEAVE --(lejos o duration)--> se elimina
 - P: CHASE --(duration)--> WANDER
-- E: AIM --(inmediato)--> STRAIGHT --(ya pasó al jugador y está lejos, o duration)--> se elimina
+- E: AIM --(en cuanto hay dirección al jugador)--> STRAIGHT --(ya pasó al jugador y está lejos, o duration)--> se elimina
 
 Eliminar por alejarse no es morir: no hay explosión ni puntos (eso es del
 sistema de combate, #16).
@@ -72,8 +72,11 @@ def _do_chase_state(c_es: CEnemyState, c_st: CSteering) -> None:
 
 def _do_aim_state(c_es: CEnemyState, c_st: CSteering, c_v: CVelocity,
                   to_target: pygame.Vector2) -> None:
-    if to_target.length_squared() > 0:
-        c_v.vel = to_target.normalize() * c_st.max_speed
+    # Sin dirección (está sobre el jugador) sigue en AIM: E no tiene fuerza de
+    # steering, así que pasar a STRAIGHT con velocidad cero lo dejaría quieto.
+    if to_target.length_squared() == 0:
+        return
+    c_v.vel = to_target.normalize() * c_st.max_speed
     change_state(c_es, c_st, EnemyState.STRAIGHT)
 
 
