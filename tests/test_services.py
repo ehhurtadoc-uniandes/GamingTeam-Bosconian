@@ -1,4 +1,5 @@
 """Pruebas del Service Locator. Ejecutar con: python -m unittest discover -s tests"""
+import json
 import os
 import tempfile
 import unittest
@@ -10,6 +11,7 @@ os.environ["SDL_AUDIODRIVER"] = "dummy"
 import pygame
 
 from src.engine.service_locator import ServiceLocator
+from src.engine.services.configs_service import ConfigsService
 from src.engine.services.fonts_service import FontsService
 from src.engine.services.images_service import ImagesService
 from src.engine.services.sounds_service import SoundsService
@@ -54,10 +56,24 @@ class TestServices(unittest.TestCase):
         self.assertIs(service.get(path, 8), font)
         self.assertIsNot(service.get(path, 16), font)
 
+    def test_config_se_carga_una_sola_vez(self):
+        path = os.path.join(self.dir, "config.json")
+        with open(path, "w", encoding="utf-8") as file:
+            json.dump({"nombre": "ñandú"}, file, ensure_ascii=False)
+        service = ConfigsService()
+        config = service.get(path)
+        self.assertEqual(config["nombre"], "ñandú")
+        self.assertIs(service.get(path), config)
+
+    def test_ventana_usa_la_resolucion_del_juego(self):
+        window = ConfigsService().get("assets/cfg/window.json")
+        self.assertEqual(window["size"], {"w": 256, "h": 208})
+
     def test_locator_expone_los_servicios(self):
         self.assertIsInstance(ServiceLocator.images_service, ImagesService)
         self.assertIsInstance(ServiceLocator.sounds_service, SoundsService)
         self.assertIsInstance(ServiceLocator.fonts_service, FontsService)
+        self.assertIsInstance(ServiceLocator.configs_service, ConfigsService)
 
 
 if __name__ == "__main__":
