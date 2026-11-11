@@ -59,12 +59,16 @@ dónde cambiarlo. Cuando se resuelva, anotar la respuesta y la fecha.
    convención: **todos los sistemas borran en diferido**. Si un sistema borra con
    `immediate=True` una entidad que otro ya marcó en diferido en el mismo frame,
    `_clear_dead_entities()` lanza `KeyError` (comprobado con nuestro esper).
-   - Respuesta:
+   - Respuesta (2026-11-11): sí. `Scene.simulate` llama a
+     `_clear_dead_entities()` después de cada `do_update` (#2, PR #65/#67). Sigue
+     pendiente acordar la convención de borrar siempre en diferido.
 
 9. **Orden de los sistemas.** En cada frame debe ser
    `system_enemy_state` → `system_steering` → `system_movement` → wraparound.
    ¿Quién arma este orden en la escena de juego?
-   - Respuesta:
+   - Respuesta (2026-11-11): cada área agrega sus sistemas en `PlayScene.do_update`.
+     Este PR deja ahí `system_enemy_state` → `system_steering` → `system_movement`; el
+     wraparound (#7) va después del movimiento.
 
 10. **Puntos y explosión (RF-10.2, #16).** `CTagEnemy.points` guarda 50/60/70.
     ¿El sistema de combate/puntaje lee ese campo al destruir un enemigo? Cuando un
