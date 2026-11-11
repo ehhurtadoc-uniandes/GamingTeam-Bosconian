@@ -1,4 +1,5 @@
 import asyncio
+import sys
 
 import pygame
 
@@ -16,7 +17,9 @@ class GameEngine:
         window = ServiceLocator.configs_service.get(WINDOW_CONFIG)
         pygame.init()
         size = window["size"]
-        self.screen = pygame.display.set_mode((size["w"], size["h"]), pygame.SCALED)
+        # En web (pygbag) SCALED falla con "failed to create renderer"; ahí el navegador escala el canvas.
+        flags = 0 if sys.platform == "emscripten" else pygame.SCALED
+        self.screen = pygame.display.set_mode((size["w"], size["h"]), flags)
         pygame.display.set_caption(window["title"])
         color = window["bg_color"]
         self.bg_color = pygame.Color(color["r"], color["g"], color["b"])
