@@ -28,8 +28,13 @@ def direction_from_commands(active_commands: set[str]) -> pygame.Vector2:
 class PlayScene(Scene):
     """Escena de juego. Por ahora solo crea al jugador; cada área agrega aquí sus entidades y sistemas."""
 
+    def __init__(self, game_engine) -> None:
+        super().__init__(game_engine)
+        # Se guardan teclas y no acciones: si una dirección tiene varias teclas, soltar una no la apaga.
+        self._held_direction_keys: set[tuple[str, int]] = set()
+
     def do_create(self) -> None:
-        self._active_directions: set[str] = set()
+        self._held_direction_keys.clear()
         player_info = ServiceLocator.configs_service.get(PLAYER_CONFIG)
         size = player_info["size"]
         pos = pygame.Vector2(self.screen_rect.center) - pygame.Vector2(size["w"], size["h"]) / 2
@@ -41,8 +46,15 @@ class PlayScene(Scene):
 
     def do_action(self, action: CInputCommand) -> None:
         if action.name in DIRECTION_COMMANDS:
+            held = (action.name, action.key)
             if action.phase == CommandPhase.START:
-                self._active_directions.add(action.name)
+                self._held_direction_keys.add(held)
             else:
-                self._active_directions.discard(action.name)
-            system_player_direction(self.ecs_world, direction_from_commands(self._active_directions))
+                self._held_direction_keys.discard(held)
+            active = {name for name, _ in self._held_direction_keys}
+            system_player_direction(self.ecs_world, direction_from_commands(active))
+
+    def do_process_events(self, event: pygame.event.Event) -> None:
+        # Al perder el foco pygame puede no enviar el KEYUP; sin esto una flecha quedaría "pegada".
+        if event.type == pygame.WINDOWFOCUSLOST:
+            self._held_direction_keys.clear()

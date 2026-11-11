@@ -60,6 +60,14 @@ class TestCreateInput(unittest.TestCase):
     def test_input_json_solo_tiene_teclas_validas(self):
         create_input(esper.World(), ServiceLocator.configs_service.get("assets/cfg/input.json"))
 
+    def test_teclas_como_string_dan_error(self):
+        with self.assertRaisesRegex(ValueError, "PLAYER_UP"):
+            create_input(esper.World(), {"PLAYER_UP": "up"})
+
+    def test_tecla_desconocida_indica_la_accion(self):
+        with self.assertRaisesRegex(ValueError, "no_existe.*PAUSE"):
+            create_input(esper.World(), {"PAUSE": ["no_existe"]})
+
 
 class TestPlaySceneInput(unittest.TestCase):
     def setUp(self):
@@ -82,6 +90,19 @@ class TestPlaySceneInput(unittest.TestCase):
         self.assertEqual(self.player_direction(), pygame.Vector2(1, 0))
         self.scene.process_events(key_event(pygame.KEYUP, pygame.K_RIGHT))
         self.assertEqual(self.player_direction(), pygame.Vector2(1, 0))
+
+    def test_soltar_una_de_dos_teclas_de_la_misma_direccion_la_mantiene(self):
+        self.scene.ecs_world.create_entity(CInputCommand("PLAYER_UP", pygame.K_w))
+        for key in (pygame.K_UP, pygame.K_w, pygame.K_RIGHT):
+            self.scene.process_events(key_event(pygame.KEYDOWN, key))
+        self.scene.process_events(key_event(pygame.KEYUP, pygame.K_w))
+        self.assertEqual(self.player_direction(), pygame.Vector2(1, -1).normalize())
+
+    def test_perder_el_foco_suelta_las_flechas(self):
+        self.scene.process_events(key_event(pygame.KEYDOWN, pygame.K_RIGHT))
+        self.scene.process_events(pygame.event.Event(pygame.WINDOWFOCUSLOST))
+        self.scene.process_events(key_event(pygame.KEYDOWN, pygame.K_UP))
+        self.assertEqual(self.player_direction(), pygame.Vector2(0, -1))
 
 
 if __name__ == "__main__":
