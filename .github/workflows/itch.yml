@@ -1,0 +1,83 @@
+# Construye la versión web con pygbag y la publica en itch.io con butler.
+#
+# Configuración del repositorio (Settings → Secrets and variables → Actions):
+#   - Secreto  BUTLER_API_KEY: API key de itch.io (Settings → API keys).
+#   - Variable ITCH_TARGET:    "usuario/proyecto" en itch.io, p. ej. "gamingteam/bosconian".
+#
+# La primera vez, en la página del proyecto en itch.io hay que marcar el archivo
+# del canal "html5" como "This file will be played in the browser".
+
+name: Publicar en itch.io
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: itch-publish
+  cancel-in-progress: true
+
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # main.py lo aporta el área de Motor y escenas; hasta que llegue a main no hay nada que publicar.
+      - name: Verificar main.py
+        id: check
+        run: |
+          if [ -f main.py ]; then
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::Todavía no hay main.py en la raíz; se omite la publicación."
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Validar configuración
+        if: steps.check.outputs.ok == 'true'
+        env:
+          ITCH_TARGET: ${{ vars.ITCH_TARGET }}
+          BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
+        run: |
+          [ -n "$ITCH_TARGET" ] || { echo "::error::Falta la variable de repo ITCH_TARGET (usuario/proyecto)."; exit 1; }
+          [ -n "$BUTLER_API_KEY" ] || { echo "::error::Falta el secreto BUTLER_API_KEY."; exit 1; }
+
+      - uses: actions/setup-python@v5
+        if: steps.check.outputs.ok == 'true'
+        with:
+          python-version: "3.12"
+
+      # Copia solo lo que necesita el juego, para que pygbag no empaquete tests, docs ni CI.
+      - name: Preparar carpeta del juego
+        if: steps.check.outputs.ok == 'true'
+        run: |
+          mkdir -p dist/bosconian
+          rsync -a ./ dist/bosconian/ \
+            --exclude '.git' --exclude '.github' --exclude '.venv' \
+            --exclude 'dist' --exclude 'build' --exclude 'tests' \
+            --exclude '__pycache__' --exclude '*.pyc' --exclude 'README.md'
+
+      - name: Build web con pygbag
+        if: steps.check.outputs.ok == 'true'
+        run: |
+          pip install pygbag==0.9.2
+          python -m pygbag --build dist/bosconian
+
+      - name: Instalar butler
+        if: steps.check.outputs.ok == 'true'
+        run: |
+          curl -fsSL -o butler.zip https://broth.itch.zone/butler/linux-amd64/LATEST/archive/default
+          unzip -q butler.zip -d butler
+          chmod +x butler/butler
+          ./butler/butler -V
+
+      - name: Publicar en itch.io
+        if: steps.check.outputs.ok == 'true'
+        env:
+          BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
+          ITCH_TARGET: ${{ vars.ITCH_TARGET }}
+        run: |
+          ./butler/butler push dist/bosconian/build/web "$ITCH_TARGET:html5" \
+            --userversion "${GITHUB_SHA::7}"
