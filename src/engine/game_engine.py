@@ -63,7 +63,7 @@ class GameEngine:
 
     def _process_events(self) -> None:
         for event in pygame.event.get():
-            self._current_scene.do_process_events(event)
+            self._current_scene.process_events(event)
             if event.type == pygame.QUIT:
                 self.is_running = False
 
