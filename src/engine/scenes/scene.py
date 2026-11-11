@@ -3,10 +3,16 @@ from typing import TYPE_CHECKING
 import esper
 import pygame
 
+from src.create.prefab_input import create_input
+from src.ecs.components.c_input_command import CInputCommand
+from src.ecs.systems.s_input import system_input
 from src.ecs.systems.s_rendering import system_rendering
+from src.engine.service_locator import ServiceLocator
 
 if TYPE_CHECKING:
     from src.engine.game_engine import GameEngine
+
+INPUT_CONFIG = "assets/cfg/input.json"
 
 
 class Scene:
@@ -21,7 +27,13 @@ class Scene:
         self.screen_rect = game_engine.screen.get_rect()
 
     def start(self) -> None:
+        # Todas las escenas reciben los mismos comandos; cada una decide en do_action cuáles usa.
+        create_input(self.ecs_world, ServiceLocator.configs_service.get(INPUT_CONFIG))
         self.do_create()
+
+    def process_events(self, event: pygame.event.Event) -> None:
+        system_input(self.ecs_world, event, self.do_action)
+        self.do_process_events(event)
 
     def simulate(self, delta_time: float) -> None:
         self.do_update(delta_time)
@@ -44,8 +56,11 @@ class Scene:
     def do_draw(self, screen: pygame.Surface) -> None:
         system_rendering(self.ecs_world, screen)
 
+    def do_action(self, action: CInputCommand) -> None:
+        """Recibe cada comando cuando su tecla se presiona (START) o se suelta (END)."""
+
     def do_process_events(self, event: pygame.event.Event) -> None:
-        """Recibe cada evento de pygame."""
+        """Recibe cada evento de pygame. Para teclas, usar do_action."""
 
     def do_clean(self) -> None:
         """Libera lo que la escena haya creado fuera de su mundo ECS."""
