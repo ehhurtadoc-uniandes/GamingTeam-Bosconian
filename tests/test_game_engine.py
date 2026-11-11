@@ -40,6 +40,7 @@ class TestGameEngine(unittest.TestCase):
         warnings.filterwarnings("ignore", message="no fast renderer")
         self.engine = GameEngine()
         self.addCleanup(pygame.quit)
+        self.addCleanup(ServiceLocator.fonts_service.clear)
         self.scene_a = FakeScene(self.engine)
         self.scene_b = FakeScene(self.engine)
         self.engine._scenes = {"a": self.scene_a, "b": self.scene_b}
@@ -81,6 +82,7 @@ class TestScene(unittest.TestCase):
         warnings.filterwarnings("ignore", message="no fast renderer")
         self.engine = GameEngine()
         self.addCleanup(pygame.quit)
+        self.addCleanup(ServiceLocator.fonts_service.clear)
 
     def test_simulate_borra_las_entidades_eliminadas(self):
         scene = Scene(self.engine)

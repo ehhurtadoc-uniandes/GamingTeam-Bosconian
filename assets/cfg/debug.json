@@ -1,0 +1,8 @@
+{
+  "enabled": true,
+  "font": "assets/fnt/PressStart2P.ttf",
+  "font_size": 8,
+  "label_color": { "r": 255, "g": 255, "b": 255 },
+  "help_text": "1:I 2:P 3:E",
+  "help_pos": { "x": 4, "y": 4 }
+}
