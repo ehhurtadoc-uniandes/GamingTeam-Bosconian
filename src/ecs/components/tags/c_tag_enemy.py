@@ -2,8 +2,11 @@ from enum import Enum
 
 
 class CTagEnemy:
-    def __init__(self, enemy_type: "EnemyType") -> None:
+    """Marca una nave enemiga. points es lo que suma al destruirla (lo lee el sistema de puntaje)."""
+
+    def __init__(self, enemy_type: "EnemyType", points: int = 0) -> None:
         self.enemy_type = enemy_type
+        self.points = points
 
 
 class EnemyType(Enum):

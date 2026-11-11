@@ -5,5 +5,8 @@
   "PLAYER_RIGHT": ["right"],
   "PLAYER_FIRE": ["z"],
   "PLAYER_SPECIAL": ["x"],
-  "PAUSE": ["p", "escape"]
+  "PAUSE": ["p", "escape"],
+  "DEBUG_SPAWN_I": ["1", "[1]"],
+  "DEBUG_SPAWN_P": ["2", "[2]"],
+  "DEBUG_SPAWN_E": ["3", "[3]"]
 }

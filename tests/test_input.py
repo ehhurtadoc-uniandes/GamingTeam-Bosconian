@@ -50,6 +50,7 @@ class TestCreateInput(unittest.TestCase):
     def setUp(self):
         pygame.init()
         self.addCleanup(pygame.quit)
+        self.addCleanup(ServiceLocator.fonts_service.clear)
 
     def test_crea_un_comando_por_tecla(self):
         world = esper.World()
@@ -75,6 +76,7 @@ class TestPlaySceneInput(unittest.TestCase):
         warnings.filterwarnings("ignore", message="no fast renderer")
         self.engine = GameEngine()
         self.addCleanup(pygame.quit)
+        self.addCleanup(ServiceLocator.fonts_service.clear)
         self.scene = self.engine._scenes["play"]
         self.scene.start()
 

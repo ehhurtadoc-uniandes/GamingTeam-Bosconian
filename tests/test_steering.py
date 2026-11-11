@@ -63,6 +63,34 @@ class TestSystemSteering(unittest.TestCase):
         system_steering(world, 1 / 60, pygame.Vector2(1000, 0))
         self.assertLess(world.component_for_entity(enemy, CVelocity).vel.x, 0)
 
+    def test_constant_speed_gira_aunque_el_objetivo_este_justo_detras(self):
+        info = dict(STEERING, constant_speed=True)
+        world = esper.World()
+        enemy = self._enemy(world, (0, 0), vel=(-70, 0), info=info)
+        for _ in range(60):  # 1 s
+            system_steering(world, 1 / 60, pygame.Vector2(1000, 0))
+        vel = world.component_for_entity(enemy, CVelocity).vel
+        # Tasa de giro = 120 / 70 ≈ 1.71 rad/s ≈ 98°/s: tras 1 s ya giró más de 90°.
+        self.assertGreater(vel.x, 0)
+
+    def test_constant_speed_mas_fuerza_gira_mas_rapido(self):
+        def angle_after(max_force):
+            info = dict(STEERING, constant_speed=True, max_force=max_force)
+            world = esper.World()
+            enemy = self._enemy(world, (0, 0), vel=(0, -70), info=info)
+            for _ in range(10):
+                system_steering(world, 1 / 60, pygame.Vector2(1000, 0))
+            return abs(pygame.Vector2(0, -70).angle_to(world.component_for_entity(enemy, CVelocity).vel))
+        self.assertGreater(angle_after(300), angle_after(120))
+
+    def test_constant_speed_mantiene_max_speed_al_girar(self):
+        info = dict(STEERING, constant_speed=True)
+        world = esper.World()
+        enemy = self._enemy(world, (0, 0), vel=(-70, 0), info=info)
+        for _ in range(60):
+            system_steering(world, 1 / 60, pygame.Vector2(1000, 0))
+            self.assertAlmostEqual(world.component_for_entity(enemy, CVelocity).vel.length(), 70)
+
     def test_wander_es_reproducible_con_semilla(self):
         info = dict(STEERING, wander_strength=0.5, wander_rate=3.0)
         results = []

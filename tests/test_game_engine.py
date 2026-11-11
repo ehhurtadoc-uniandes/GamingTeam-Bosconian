@@ -8,10 +8,13 @@ os.environ["SDL_AUDIODRIVER"] = "dummy"
 
 import pygame
 
+from src.create.prefab_enemy import create_enemy
 from src.ecs.components.c_transform import CTransform
+from src.ecs.components.tags.c_tag_enemy import EnemyType
 from src.ecs.components.tags.c_tag_player import CTagPlayer
 from src.engine.game_engine import GameEngine
 from src.engine.scenes.scene import Scene
+from src.engine.service_locator import ServiceLocator
 
 
 class FakeScene(Scene):
@@ -37,6 +40,7 @@ class TestGameEngine(unittest.TestCase):
         warnings.filterwarnings("ignore", message="no fast renderer")
         self.engine = GameEngine()
         self.addCleanup(pygame.quit)
+        self.addCleanup(ServiceLocator.fonts_service.clear)
         self.scene_a = FakeScene(self.engine)
         self.scene_b = FakeScene(self.engine)
         self.engine._scenes = {"a": self.scene_a, "b": self.scene_b}
@@ -78,6 +82,7 @@ class TestScene(unittest.TestCase):
         warnings.filterwarnings("ignore", message="no fast renderer")
         self.engine = GameEngine()
         self.addCleanup(pygame.quit)
+        self.addCleanup(ServiceLocator.fonts_service.clear)
 
     def test_simulate_borra_las_entidades_eliminadas(self):
         scene = Scene(self.engine)
@@ -98,6 +103,26 @@ class TestScene(unittest.TestCase):
         self.assertEqual(len(scene.ecs_world.get_component(CTagPlayer)), 1)
         scene.simulate(self.engine.fixed_dt)
         scene.do_draw(self.engine.screen)
+
+    def test_escena_de_juego_mueve_enemigos_hacia_el_jugador_y_los_borra(self):
+        scene = self.engine._scenes["play"]
+        scene.start()
+        player_pos = scene.ecs_world.component_for_entity(scene._player_entity, CTransform).pos
+        enemies_info = ServiceLocator.configs_service.get("assets/cfg/enemies.json")
+        enemy = create_enemy(scene.ecs_world, enemies_info, player_pos + pygame.Vector2(-60, 0), EnemyType.E)
+        start = pygame.Vector2(scene.ecs_world.component_for_entity(enemy, CTransform).pos)
+
+        scene.simulate(self.engine.fixed_dt)
+        scene.simulate(self.engine.fixed_dt)
+        pos = scene.ecs_world.component_for_entity(enemy, CTransform).pos
+        self.assertGreater(pos.x, start.x)
+
+        # E se elimina al agotar su tiempo; simulate limpia la entidad sin errores.
+        duration = enemies_info["E"]["states"]["STRAIGHT"]["duration"]
+        for _ in range(int(duration / self.engine.fixed_dt) + 2):
+            scene.simulate(self.engine.fixed_dt)
+        self.assertFalse(scene.ecs_world.entity_exists(enemy))
+        self.assertTrue(scene.ecs_world.entity_exists(scene._player_entity))
 
 
 if __name__ == "__main__":
