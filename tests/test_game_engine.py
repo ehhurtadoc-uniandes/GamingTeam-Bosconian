@@ -5,8 +5,6 @@ import warnings
 
 os.environ["SDL_VIDEODRIVER"] = "dummy"
 os.environ["SDL_AUDIODRIVER"] = "dummy"
-# El driver dummy no tiene renderer acelerado para pygame.SCALED; en una ventana real no aparece.
-warnings.filterwarnings("ignore", message="no fast renderer")
 
 import pygame
 
@@ -35,6 +33,8 @@ class FakeScene(Scene):
 
 class TestGameEngine(unittest.TestCase):
     def setUp(self):
+        # El driver dummy no tiene renderer acelerado para pygame.SCALED; en una ventana real no aparece.
+        warnings.filterwarnings("ignore", message="no fast renderer")
         self.engine = GameEngine()
         self.addCleanup(pygame.quit)
         self.scene_a = FakeScene(self.engine)
@@ -74,6 +74,8 @@ class TestGameEngine(unittest.TestCase):
 
 class TestScene(unittest.TestCase):
     def setUp(self):
+        # El driver dummy no tiene renderer acelerado para pygame.SCALED; en una ventana real no aparece.
+        warnings.filterwarnings("ignore", message="no fast renderer")
         self.engine = GameEngine()
         self.addCleanup(pygame.quit)
 

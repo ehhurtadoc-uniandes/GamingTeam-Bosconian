@@ -1,0 +1,9 @@
+{
+  "PLAYER_UP": ["up"],
+  "PLAYER_DOWN": ["down"],
+  "PLAYER_LEFT": ["left"],
+  "PLAYER_RIGHT": ["right"],
+  "PLAYER_FIRE": ["z"],
+  "PLAYER_SPECIAL": ["x"],
+  "PAUSE": ["p", "escape"]
+}
