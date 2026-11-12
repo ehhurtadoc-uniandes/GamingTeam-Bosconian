@@ -6,13 +6,17 @@ from src.create.prefab_base import create_bases
 from src.create.prefab_enemy import create_enemy
 from src.create.prefab_player import create_player
 from src.ecs.components.c_input_command import CInputCommand, CommandPhase
+from src.ecs.components.c_surface import CSurface
 from src.ecs.components.c_transform import CTransform
 from src.ecs.components.tags.c_tag_enemy import EnemyType
 from src.ecs.systems.s_debug_labels import system_enemy_labels
+from src.ecs.systems.s_enemy_bullet_collision import system_enemy_bullet_collision
 from src.ecs.systems.s_enemy_state import system_enemy_state
+from src.ecs.systems.s_lifetime import system_lifetime
 from src.ecs.systems.s_movement import system_movement
 from src.ecs.systems.s_player_movement import system_player_acceleration, system_player_direction
 from src.ecs.systems.s_steering import system_steering
+from src.ecs.systems.s_turret import system_turret
 from src.engine.scenes.scene import Scene
 from src.engine.service_locator import ServiceLocator
 
@@ -90,6 +94,7 @@ class PlayScene(Scene):
         level_path = ServiceLocator.configs_service.get(LEVELS_CONFIG)["levels"][self.level_index]
         level_info = ServiceLocator.configs_service.get(level_path)
         base_info = ServiceLocator.configs_service.get(BASE_CONFIG)
+        self._bullet_info = base_info["bullet"]
         try:
             create_bases(self.ecs_world, base_info, level_info)
         except ValueError as error:
@@ -102,7 +107,14 @@ class PlayScene(Scene):
         player_pos = self.ecs_world.component_for_entity(self._player_entity, CTransform).pos
         system_enemy_state(self.ecs_world, delta_time, player_pos)
         system_steering(self.ecs_world, delta_time, player_pos)
+        # Las torretas disparan antes del movimiento para que la bala nueva avance en este frame.
+        player_size = self.ecs_world.component_for_entity(self._player_entity, CSurface).area.size
+        player_center = player_pos + pygame.Vector2(player_size) / 2
+        system_turret(self.ecs_world, delta_time, player_center, self._bullet_info)
         system_movement(self.ecs_world, delta_time)
+        # Sin cámara (#6), "salir de la pantalla" es salir de la ventana.
+        system_lifetime(self.ecs_world, delta_time, self.screen_rect)
+        system_enemy_bullet_collision(self.ecs_world)
 
     def do_draw(self, screen: pygame.Surface) -> None:
         super().do_draw(screen)

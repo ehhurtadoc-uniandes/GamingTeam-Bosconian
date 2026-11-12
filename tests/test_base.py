@@ -22,7 +22,9 @@ from src.scenes.play_scene import BASE_CONFIG, LEVELS_CONFIG
 BASE_INFO = {
     "body": {"size": {"w": 60, "h": 40}, "color": {"r": 0, "g": 255, "b": 0}},
     "core": {"size": {"w": 12, "h": 8}, "color": {"r": 255, "g": 0, "b": 0}, "offset": {"x": 0, "y": 0}},
-    "turret": {"size": {"w": 10, "h": 6}, "color": {"r": 255, "g": 255, "b": 255}},
+    "turret": {"size": {"w": 10, "h": 6}, "color": {"r": 255, "g": 255, "b": 255},
+               "open_color": {"r": 255, "g": 128, "b": 0}, "activation_distance": 50,
+               "fire_interval": {"min": 1.0, "max": 2.0}},
     "turret_offsets": [
         {"x": -20, "y": 0}, {"x": -10, "y": -10}, {"x": 10, "y": -10},
         {"x": 20, "y": 0}, {"x": 10, "y": 10}, {"x": -10, "y": 10},
