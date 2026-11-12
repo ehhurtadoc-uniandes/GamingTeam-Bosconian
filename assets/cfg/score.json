@@ -1,0 +1,27 @@
+{
+  "initial_hi_score": 20000,
+  "hud": {
+    "score_label": {
+      "text": "1UP",
+      "anchor": { "x": 148, "y": 4 },
+      "alignment": "CENTER",
+      "color": { "r": 255, "g": 60, "b": 60 }
+    },
+    "score_value": {
+      "anchor": { "x": 148, "y": 14 },
+      "alignment": "CENTER",
+      "color": { "r": 255, "g": 255, "b": 255 }
+    },
+    "hi_score_label": {
+      "text": "HI-SCORE",
+      "anchor": { "x": 212, "y": 4 },
+      "alignment": "CENTER",
+      "color": { "r": 255, "g": 60, "b": 60 }
+    },
+    "hi_score_value": {
+      "anchor": { "x": 212, "y": 14 },
+      "alignment": "CENTER",
+      "color": { "r": 255, "g": 255, "b": 255 }
+    }
+  }
+}

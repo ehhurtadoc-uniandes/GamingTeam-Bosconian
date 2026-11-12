@@ -4,6 +4,7 @@ import pygame
 
 from src.create.prefab_base import create_bases
 from src.create.prefab_enemy import create_enemy
+from src.create.prefab_hud import create_score_hud
 from src.create.prefab_player import create_player
 from src.ecs.components.c_input_command import CInputCommand, CommandPhase
 from src.ecs.components.c_surface import CSurface
@@ -15,6 +16,7 @@ from src.ecs.systems.s_enemy_state import system_enemy_state
 from src.ecs.systems.s_lifetime import system_lifetime
 from src.ecs.systems.s_movement import system_movement
 from src.ecs.systems.s_player_movement import system_player_acceleration, system_player_direction
+from src.ecs.systems.s_score import system_score_hud
 from src.ecs.systems.s_steering import system_steering
 from src.ecs.systems.s_turret import system_turret
 from src.engine.scenes.scene import Scene
@@ -25,6 +27,7 @@ ENEMIES_CONFIG = "assets/cfg/enemies.json"
 DEBUG_CONFIG = "assets/cfg/debug.json"
 BASE_CONFIG = "assets/cfg/base.json"
 LEVELS_CONFIG = "assets/cfg/levels.json"
+SCORE_CONFIG = "assets/cfg/score.json"
 
 DIRECTION_COMMANDS = {
     "PLAYER_UP": pygame.Vector2(0, -1),
@@ -88,6 +91,7 @@ class PlayScene(Scene):
         pos = pygame.Vector2(self.screen_rect.center) - pygame.Vector2(size["w"], size["h"]) / 2
         self._player_entity = create_player(self.ecs_world, player_info, pos)
         self._debug_info = ServiceLocator.configs_service.get(DEBUG_CONFIG)
+        create_score_hud(self.ecs_world, ServiceLocator.configs_service.get(SCORE_CONFIG)["hud"])
 
     def _create_level(self) -> None:
         """Crea las entidades del nivel actual según su JSON (por ahora, las bases)."""
@@ -115,6 +119,8 @@ class PlayScene(Scene):
         # Sin cámara (#6), "salir de la pantalla" es salir de la ventana.
         system_lifetime(self.ecs_world, delta_time, self.screen_rect)
         system_enemy_bullet_collision(self.ecs_world)
+        # Al final, para que el HUD muestre los puntos sumados en este paso.
+        system_score_hud(self.ecs_world, self.session)
 
     def do_draw(self, screen: pygame.Surface) -> None:
         super().do_draw(screen)

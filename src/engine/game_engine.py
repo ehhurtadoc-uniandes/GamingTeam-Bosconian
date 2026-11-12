@@ -3,11 +3,13 @@ import sys
 
 import pygame
 
+from src.engine.game_session import GameSession
 from src.engine.scenes.scene import Scene
 from src.engine.service_locator import ServiceLocator
 from src.scenes.play_scene import PlayScene
 
 WINDOW_CONFIG = "assets/cfg/window.json"
+SCORE_CONFIG = "assets/cfg/score.json"
 
 
 class GameEngine:
@@ -29,6 +31,7 @@ class GameEngine:
         self.clock = pygame.time.Clock()
         self.is_running = False
         self._accumulator = 0.0
+        self.session = GameSession(ServiceLocator.configs_service.get(SCORE_CONFIG))
 
         self._scenes: dict[str, Scene] = {
             "play": PlayScene(self),
