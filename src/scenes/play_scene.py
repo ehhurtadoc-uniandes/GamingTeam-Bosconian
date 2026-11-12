@@ -2,6 +2,7 @@ import random
 
 import pygame
 
+from src.create.prefab_base import create_bases
 from src.create.prefab_enemy import create_enemy
 from src.create.prefab_player import create_player
 from src.ecs.components.c_input_command import CInputCommand, CommandPhase
@@ -18,6 +19,8 @@ from src.engine.service_locator import ServiceLocator
 PLAYER_CONFIG = "assets/cfg/player.json"
 ENEMIES_CONFIG = "assets/cfg/enemies.json"
 DEBUG_CONFIG = "assets/cfg/debug.json"
+BASE_CONFIG = "assets/cfg/base.json"
+LEVELS_CONFIG = "assets/cfg/levels.json"
 
 DIRECTION_COMMANDS = {
     "PLAYER_UP": pygame.Vector2(0, -1),
@@ -68,16 +71,29 @@ class PlayScene(Scene):
 
     def __init__(self, game_engine) -> None:
         super().__init__(game_engine)
+        # Índice en levels.json del nivel que se juega. Pasar de nivel (#26) lo avanzará.
+        self.level_index = 0
         # Se guardan teclas y no acciones: si una dirección tiene varias teclas, soltar una no la apaga.
         self._held_direction_keys: set[tuple[str, int]] = set()
 
     def do_create(self) -> None:
         self._held_direction_keys.clear()
+        self._create_level()
         player_info = ServiceLocator.configs_service.get(PLAYER_CONFIG)
         size = player_info["size"]
         pos = pygame.Vector2(self.screen_rect.center) - pygame.Vector2(size["w"], size["h"]) / 2
         self._player_entity = create_player(self.ecs_world, player_info, pos)
         self._debug_info = ServiceLocator.configs_service.get(DEBUG_CONFIG)
+
+    def _create_level(self) -> None:
+        """Crea las entidades del nivel actual según su JSON (por ahora, las bases)."""
+        level_path = ServiceLocator.configs_service.get(LEVELS_CONFIG)["levels"][self.level_index]
+        level_info = ServiceLocator.configs_service.get(level_path)
+        base_info = ServiceLocator.configs_service.get(BASE_CONFIG)
+        try:
+            create_bases(self.ecs_world, base_info, level_info)
+        except ValueError as error:
+            raise ValueError(f"{level_path}: {error}") from error
 
     def do_update(self, delta_time: float) -> None:
         system_player_acceleration(self.ecs_world, delta_time)

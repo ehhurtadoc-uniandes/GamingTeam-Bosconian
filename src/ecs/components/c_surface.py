@@ -6,3 +6,11 @@ class CSurface:
         self.surf = pygame.Surface(size)
         self.surf.fill(color)
         self.area = self.surf.get_rect()
+
+    @classmethod
+    def from_surface(cls, surface: pygame.Surface) -> "CSurface":
+        """CSurface a partir de una imagen ya cargada (por ejemplo, un sprite)."""
+        c_surf = cls(pygame.Vector2(0, 0), pygame.Color(0, 0, 0))
+        c_surf.surf = surface
+        c_surf.area = surface.get_rect()
+        return c_surf
