@@ -10,7 +10,16 @@
   },
   "turret": {
     "size": { "w": 10, "h": 10 },
-    "color": { "r": 200, "g": 220, "b": 200 }
+    "color": { "r": 200, "g": 220, "b": 200 },
+    "open_color": { "r": 255, "g": 140, "b": 40 },
+    "activation_distance": 90,
+    "fire_interval": { "min": 1.2, "max": 2.4 }
+  },
+  "bullet": {
+    "size": { "w": 3, "h": 3 },
+    "color": { "r": 255, "g": 230, "b": 120 },
+    "speed": 90,
+    "lifetime": 2.0
   },
   "turret_offsets": [
     { "x": -26, "y": 0 },
