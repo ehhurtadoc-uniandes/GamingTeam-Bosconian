@@ -7,6 +7,7 @@ from src.create.prefab_camera import create_camera
 from src.create.prefab_enemy import create_enemy
 from src.create.prefab_hud import create_score_hud
 from src.create.prefab_player import create_player
+from src.create.prefab_stars import create_starfield
 from src.ecs.components.c_input_command import CInputCommand, CommandPhase
 from src.ecs.components.c_surface import CSurface
 from src.ecs.components.c_transform import CTransform
@@ -19,6 +20,7 @@ from src.ecs.systems.s_lifetime import system_lifetime
 from src.ecs.systems.s_movement import system_movement
 from src.ecs.systems.s_player_movement import system_player_acceleration, system_player_direction
 from src.ecs.systems.s_score import system_score_hud
+from src.ecs.systems.s_starfield import system_starfield
 from src.ecs.systems.s_steering import system_steering
 from src.ecs.systems.s_turret import system_turret
 from src.ecs.systems.s_wraparound import system_wraparound
@@ -32,6 +34,7 @@ DEBUG_CONFIG = "assets/cfg/debug.json"
 BASE_CONFIG = "assets/cfg/base.json"
 LEVELS_CONFIG = "assets/cfg/levels.json"
 WORLD_CONFIG = "assets/cfg/world.json"
+STARS_CONFIG = "assets/cfg/stars.json"
 SCORE_CONFIG = "assets/cfg/score.json"
 
 DIRECTION_COMMANDS = {
@@ -90,6 +93,7 @@ class PlayScene(Scene):
 
     def do_create(self) -> None:
         self._held_direction_keys.clear()
+        # Las estrellas se crean primero; igual system_rendering las dibuja siempre debajo (CTagBackground).
         world_info = ServiceLocator.configs_service.get(WORLD_CONFIG)
         self.world_size = world_size_from_config(world_info)
         self._create_level()
@@ -99,6 +103,8 @@ class PlayScene(Scene):
         self._player_entity = create_player(self.ecs_world, player_info, pos)
         player_center = pos + pygame.Vector2(size["w"], size["h"]) / 2
         create_camera(self.ecs_world, world_info["camera"], self.world_size, player_center)
+        self._stars_info = ServiceLocator.configs_service.get(STARS_CONFIG)
+        create_starfield(self.ecs_world, self._stars_info, get_camera(self.ecs_world).viewport)
         self._debug_info = ServiceLocator.configs_service.get(DEBUG_CONFIG)
         create_score_hud(self.ecs_world, ServiceLocator.configs_service.get(SCORE_CONFIG)["hud"])
 
@@ -129,6 +135,7 @@ class PlayScene(Scene):
         system_wraparound(self.ecs_world, self.world_size)
         # La cámara sigue al jugador ya movido, para que no se vea un frame atrasada.
         system_camera(self.ecs_world, player_pos + pygame.Vector2(player_size) / 2)
+        system_starfield(self.ecs_world, delta_time, get_camera(self.ecs_world), self._stars_info["blink"])
         # "Salir de la pantalla" es salir de lo que ve la cámara.
         system_lifetime(self.ecs_world, delta_time, camera=get_camera(self.ecs_world))
         system_enemy_bullet_collision(self.ecs_world)
