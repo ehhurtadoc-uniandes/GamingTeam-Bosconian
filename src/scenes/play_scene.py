@@ -19,14 +19,17 @@ from src.ecs.systems.s_player_movement import system_player_acceleration, system
 from src.ecs.systems.s_score import system_score_hud
 from src.ecs.systems.s_steering import system_steering
 from src.ecs.systems.s_turret import system_turret
+from src.ecs.systems.s_wraparound import system_wraparound
 from src.engine.scenes.scene import Scene
 from src.engine.service_locator import ServiceLocator
+from src.utils.wrap import world_size_from_config
 
 PLAYER_CONFIG = "assets/cfg/player.json"
 ENEMIES_CONFIG = "assets/cfg/enemies.json"
 DEBUG_CONFIG = "assets/cfg/debug.json"
 BASE_CONFIG = "assets/cfg/base.json"
 LEVELS_CONFIG = "assets/cfg/levels.json"
+WORLD_CONFIG = "assets/cfg/world.json"
 SCORE_CONFIG = "assets/cfg/score.json"
 
 DIRECTION_COMMANDS = {
@@ -85,6 +88,7 @@ class PlayScene(Scene):
 
     def do_create(self) -> None:
         self._held_direction_keys.clear()
+        self.world_size = world_size_from_config(ServiceLocator.configs_service.get(WORLD_CONFIG))
         self._create_level()
         player_info = ServiceLocator.configs_service.get(PLAYER_CONFIG)
         size = player_info["size"]
@@ -107,15 +111,17 @@ class PlayScene(Scene):
     def do_update(self, delta_time: float) -> None:
         system_player_acceleration(self.ecs_world, delta_time)
         # Los enemigos persiguen la posición del jugador. El estado va antes que el
-        # steering porque ajusta sus pesos; world_size queda en None hasta el wraparound (#7).
+        # steering porque ajusta sus pesos. Con world_size persiguen cruzando los bordes.
         player_pos = self.ecs_world.component_for_entity(self._player_entity, CTransform).pos
-        system_enemy_state(self.ecs_world, delta_time, player_pos)
-        system_steering(self.ecs_world, delta_time, player_pos)
+        system_enemy_state(self.ecs_world, delta_time, player_pos, self.world_size)
+        system_steering(self.ecs_world, delta_time, player_pos, self.world_size)
         # Las torretas disparan antes del movimiento para que la bala nueva avance en este frame.
         player_size = self.ecs_world.component_for_entity(self._player_entity, CSurface).area.size
         player_center = player_pos + pygame.Vector2(player_size) / 2
-        system_turret(self.ecs_world, delta_time, player_center, self._bullet_info)
+        system_turret(self.ecs_world, delta_time, player_center, self._bullet_info, self.world_size)
         system_movement(self.ecs_world, delta_time)
+        # Justo después de mover: lo que salió por un borde vuelve por el opuesto.
+        system_wraparound(self.ecs_world, self.world_size)
         # Sin cámara (#6), "salir de la pantalla" es salir de la ventana.
         system_lifetime(self.ecs_world, delta_time, self.screen_rect)
         system_enemy_bullet_collision(self.ecs_world)
