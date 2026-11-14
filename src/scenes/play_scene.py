@@ -5,6 +5,7 @@ import pygame
 from src.create.prefab_base import create_bases
 from src.create.prefab_camera import create_camera
 from src.create.prefab_enemy import create_enemy
+from src.create.prefab_enemy_spawner import create_enemy_spawner
 from src.create.prefab_hud import create_score_hud
 from src.create.prefab_player import create_player
 from src.create.prefab_stars import create_starfield
@@ -15,6 +16,7 @@ from src.ecs.components.tags.c_tag_enemy import EnemyType
 from src.ecs.systems.s_camera import get_camera, system_camera, view_top_left
 from src.ecs.systems.s_debug_labels import system_enemy_labels
 from src.ecs.systems.s_enemy_bullet_collision import system_enemy_bullet_collision
+from src.ecs.systems.s_enemy_spawner import system_enemy_spawner
 from src.ecs.systems.s_enemy_state import system_enemy_state
 from src.ecs.systems.s_lifetime import system_lifetime
 from src.ecs.systems.s_movement import system_movement
@@ -36,6 +38,7 @@ LEVELS_CONFIG = "assets/cfg/levels.json"
 WORLD_CONFIG = "assets/cfg/world.json"
 STARS_CONFIG = "assets/cfg/stars.json"
 SCORE_CONFIG = "assets/cfg/score.json"
+SPAWNER_CONFIG = "assets/cfg/spawner.json"
 
 DIRECTION_COMMANDS = {
     "PLAYER_UP": pygame.Vector2(0, -1),
@@ -53,7 +56,7 @@ def direction_from_commands(active_commands: set[str]) -> pygame.Vector2:
     return direction
 
 
-# Mientras no exista el spawner (#28), estas teclas crean enemigos para probarlos.
+# Con el modo de depuración, estas teclas crean enemigos a pedido, además de los del spawner (#28).
 DEBUG_SPAWN_COMMANDS = {
     "DEBUG_SPAWN_I": EnemyType.I,
     "DEBUG_SPAWN_P": EnemyType.P,
@@ -109,14 +112,17 @@ class PlayScene(Scene):
         create_score_hud(self.ecs_world, ServiceLocator.configs_service.get(SCORE_CONFIG)["hud"])
 
     def _create_level(self) -> None:
-        """Crea las entidades del nivel actual según su JSON (por ahora, las bases)."""
+        """Crea las entidades del nivel actual según su JSON: las bases y el spawner de enemigos."""
         level_path = ServiceLocator.configs_service.get(LEVELS_CONFIG)["levels"][self.level_index]
         level_info = ServiceLocator.configs_service.get(level_path)
         base_info = ServiceLocator.configs_service.get(BASE_CONFIG)
         self._bullet_info = base_info["bullet"]
+        self._enemies_info = ServiceLocator.configs_service.get(ENEMIES_CONFIG)
+        self._spawn_margin = ServiceLocator.configs_service.get(SPAWNER_CONFIG)["offscreen_margin"]
         try:
             create_bases(self.ecs_world, base_info, level_info)
-        except ValueError as error:
+            create_enemy_spawner(self.ecs_world, level_info)
+        except (KeyError, ValueError) as error:
             raise ValueError(f"{level_path}: {error}") from error
 
     def do_update(self, delta_time: float) -> None:
@@ -124,6 +130,9 @@ class PlayScene(Scene):
         # Los enemigos persiguen la posición del jugador. El estado va antes que el
         # steering porque ajusta sus pesos. Con world_size persiguen cruzando los bordes.
         player_pos = self.ecs_world.component_for_entity(self._player_entity, CTransform).pos
+        # Los enemigos nuevos salen fuera de lo que ve la cámara (aún en la posición del paso anterior).
+        system_enemy_spawner(self.ecs_world, delta_time, get_camera(self.ecs_world),
+                             self._enemies_info, self._spawn_margin)
         system_enemy_state(self.ecs_world, delta_time, player_pos, self.world_size)
         system_steering(self.ecs_world, delta_time, player_pos, self.world_size)
         # Las torretas disparan antes del movimiento para que la bala nueva avance en este frame.
