@@ -38,7 +38,8 @@ class TestDebugEnemies(unittest.TestCase):
         for key in (pygame.K_1, pygame.K_2, pygame.K_3):
             self.scene.process_events(key_event(pygame.KEYDOWN, key))
             self.scene.process_events(key_event(pygame.KEYUP, key))
-        self.assertEqual(self.enemy_types(), [EnemyType.I, EnemyType.P, EnemyType.E])
+        # esper no garantiza el orden de get_component (guarda las entidades en un set).
+        self.assertCountEqual(self.enemy_types(), [EnemyType.I, EnemyType.P, EnemyType.E])
 
     def test_enemigo_creado_aparece_en_un_borde_y_se_mueve(self):
         self.scene.process_events(key_event(pygame.KEYDOWN, pygame.K_1))
