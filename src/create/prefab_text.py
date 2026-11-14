@@ -14,6 +14,6 @@ def create_text(world: esper.World, text: str, font: pygame.font.Font, color: py
     """Crea un texto de interfaz alineado en anchor (coordenadas de pantalla)."""
     c_text = CText(text, font, pygame.Color(color), pygame.Vector2(anchor), alignment)
     c_surface = CSurface.from_text(text, font, c_text.color)
-    c_text.rendered = (text, pygame.Color(c_text.color))
+    c_text.rendered = c_text.render_key()
     pos = aligned_position(c_text.anchor, c_surface.area.width, alignment)
     return world.create_entity(CTransform(pos), c_surface, c_text, CTagUI())

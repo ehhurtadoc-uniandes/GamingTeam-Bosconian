@@ -8,11 +8,13 @@ from src.ecs.components.c_transform import CTransform
 
 def aligned_position(anchor: pygame.Vector2, width: float, alignment: TextAlignment) -> pygame.Vector2:
     """Esquina superior izquierda de un texto de ese ancho alineado en anchor."""
+    if alignment == TextAlignment.LEFT:
+        return pygame.Vector2(anchor)
     if alignment == TextAlignment.CENTER:
         return pygame.Vector2(anchor.x - width / 2, anchor.y)
     if alignment == TextAlignment.RIGHT:
         return pygame.Vector2(anchor.x - width, anchor.y)
-    return pygame.Vector2(anchor)
+    raise ValueError(f"Alineación de texto desconocida: {alignment!r}")
 
 
 def system_text(world: esper.World) -> None:
@@ -22,7 +24,7 @@ def system_text(world: esper.World) -> None:
     c_s: CSurface
     c_t: CTransform
     for _, (c_text, c_s, c_t) in components:
-        current = (c_text.text, pygame.Color(c_text.color))
+        current = c_text.render_key()
         if c_text.rendered != current:
             c_s.surf = c_text.font.render(c_text.text, False, c_text.color)
             c_s.area = c_s.surf.get_rect()
