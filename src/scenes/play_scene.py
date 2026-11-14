@@ -5,7 +5,7 @@ import pygame
 from src.create.prefab_base import create_bases
 from src.create.prefab_camera import create_camera
 from src.create.prefab_enemy import create_enemy
-from src.create.prefab_hud import create_score_hud
+from src.create.prefab_hud import create_lives_hud, create_score_hud
 from src.create.prefab_player import create_player
 from src.create.prefab_stars import create_starfield
 from src.ecs.components.c_input_command import CInputCommand, CommandPhase
@@ -17,6 +17,7 @@ from src.ecs.systems.s_debug_labels import system_enemy_labels
 from src.ecs.systems.s_enemy_bullet_collision import system_enemy_bullet_collision
 from src.ecs.systems.s_enemy_state import system_enemy_state
 from src.ecs.systems.s_lifetime import system_lifetime
+from src.ecs.systems.s_lives_hud import system_lives_hud
 from src.ecs.systems.s_movement import system_movement
 from src.ecs.systems.s_offscreen_despawn import system_offscreen_despawn
 from src.ecs.systems.s_player_movement import system_player_acceleration, system_player_direction
@@ -83,7 +84,9 @@ class PlayScene(Scene):
         self._stars_info = ServiceLocator.configs_service.get(constants.stars_config)
         create_starfield(self.ecs_world, self._stars_info, get_camera(self.ecs_world).viewport)
         self._debug_info = ServiceLocator.configs_service.get(constants.debug_config)
-        create_score_hud(self.ecs_world, ServiceLocator.configs_service.get(constants.score_config)["hud"])
+        score_info = ServiceLocator.configs_service.get(constants.score_config)
+        create_score_hud(self.ecs_world, score_info["hud"])
+        create_lives_hud(self.ecs_world, score_info["lives"]["hud"])
 
     def _create_level(self) -> None:
         """Crea las entidades del nivel actual según su JSON (por ahora, las bases)."""
@@ -120,6 +123,7 @@ class PlayScene(Scene):
         system_enemy_bullet_collision(self.ecs_world)
         # Al final, para que el HUD muestre los puntos sumados en este paso.
         system_score_hud(self.ecs_world)
+        system_lives_hud(self.ecs_world)
 
     def do_draw(self, screen: pygame.Surface) -> None:
         super().do_draw(screen)
