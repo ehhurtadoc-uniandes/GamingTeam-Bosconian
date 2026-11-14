@@ -14,3 +14,8 @@ class CSurface:
         c_surf.surf = surface
         c_surf.area = surface.get_rect()
         return c_surf
+
+    @classmethod
+    def from_text(cls, text: str, font: pygame.font.Font, color: pygame.Color) -> "CSurface":
+        """CSurface con el texto dibujado. Sin antialiasing, para que la fuente pixel se vea nítida."""
+        return cls.from_surface(font.render(text, False, color))

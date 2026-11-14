@@ -7,6 +7,7 @@ from src.create.prefab_input import create_input
 from src.ecs.components.c_input_command import CInputCommand
 from src.ecs.systems.s_input import system_input
 from src.ecs.systems.s_rendering import system_rendering
+from src.ecs.systems.s_text import system_text
 from src.engine.service_locator import ServiceLocator
 
 if TYPE_CHECKING:
@@ -54,6 +55,8 @@ class Scene:
         """Llama a los sistemas de la escena en cada paso fijo."""
 
     def do_draw(self, screen: pygame.Surface) -> None:
+        # Los textos se actualizan justo antes de dibujar, así reflejan cualquier cambio del frame.
+        system_text(self.ecs_world)
         system_rendering(self.ecs_world, screen)
 
     def do_action(self, action: CInputCommand) -> None:
