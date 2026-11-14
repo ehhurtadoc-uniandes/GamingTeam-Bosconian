@@ -1,5 +1,4 @@
 """Pruebas de los steering behaviours. Ejecutar con: python -m unittest discover -s tests"""
-import random
 import unittest
 
 import esper
@@ -90,18 +89,6 @@ class TestSystemSteering(unittest.TestCase):
         for _ in range(60):
             system_steering(world, 1 / 60, pygame.Vector2(1000, 0))
             self.assertAlmostEqual(world.component_for_entity(enemy, CVelocity).vel.length(), 70)
-
-    def test_wander_es_reproducible_con_semilla(self):
-        info = dict(STEERING, wander_strength=0.5, wander_rate=3.0)
-        results = []
-        for _ in range(2):
-            world = esper.World()
-            enemy = self._enemy(world, (0, 0), vel=(70, 0), info=info)
-            rng = random.Random(7)
-            for _ in range(30):
-                system_steering(world, 1 / 60, pygame.Vector2(1000, 0), rng=rng)
-            results.append(pygame.Vector2(world.component_for_entity(enemy, CVelocity).vel))
-        self.assertEqual(results[0], results[1])
 
 
 if __name__ == "__main__":

@@ -85,20 +85,18 @@ def turn_towards(velocity: pygame.Vector2, desired: pygame.Vector2, max_turn_rad
 
 
 def system_steering(world: esper.World, delta_time: float, target: pygame.Vector2,
-                    world_size: pygame.Vector2 | None = None,
-                    rng: random.Random | None = None) -> None:
+                    world_size: pygame.Vector2 | None = None) -> None:
     """Aplica steering a todas las entidades con CSteering para perseguir target.
 
     No mueve la posición: eso lo hace el sistema de movimiento con CVelocity.
     """
-    rng = rng or random
     components = world.get_components(CTransform, CVelocity, CSteering)
     c_t: CTransform
     c_v: CVelocity
     c_st: CSteering
     for _, (c_t, c_v, c_st) in components:
         if c_st.wander_rate > 0:
-            c_st.wander_angle += rng.uniform(-1.0, 1.0) * c_st.wander_rate * delta_time
+            c_st.wander_angle += random.uniform(-1.0, 1.0) * c_st.wander_rate * delta_time
             c_st.wander_angle = max(-math.pi / 2, min(math.pi / 2, c_st.wander_angle))
         if c_st.constant_speed:
             # La rapidez es fija, así que la fuerza solo sirve para girar. Con un

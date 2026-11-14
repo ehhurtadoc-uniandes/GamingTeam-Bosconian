@@ -15,7 +15,6 @@ from src.ecs.components.c_transform import CTransform
 from src.ecs.components.tags.c_tag_ui import CTagUI
 from src.ecs.systems.s_rendering import system_rendering
 from src.ecs.systems.s_text import aligned_position, system_text
-from src.engine.game_session import GameSession
 from src.engine.scenes.scene import Scene
 from src.engine.service_locator import ServiceLocator
 
@@ -37,7 +36,6 @@ class FakeEngine:
 
     def __init__(self, screen):
         self.screen = screen
-        self.session = GameSession({"initial_hi_score": 0})
 
 
 class TestText(unittest.TestCase):

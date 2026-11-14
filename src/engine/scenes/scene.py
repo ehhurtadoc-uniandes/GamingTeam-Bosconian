@@ -13,9 +13,6 @@ from src.engine.service_locator import ServiceLocator
 if TYPE_CHECKING:
     from src.engine.game_engine import GameEngine
 
-INPUT_CONFIG = "assets/cfg/input.json"
-
-
 class Scene:
     """Escena base (patrón Scene). Cada escena tiene su propio mundo ECS.
 
@@ -26,11 +23,11 @@ class Scene:
         self.ecs_world = esper.World()
         self._game_engine = game_engine
         self.screen_rect = game_engine.screen.get_rect()
-        self.session = game_engine.session
 
     def start(self) -> None:
         # Todas las escenas reciben los mismos comandos; cada una decide en do_action cuáles usa.
-        create_input(self.ecs_world, ServiceLocator.configs_service.get(INPUT_CONFIG))
+        input_config = ServiceLocator.constants_service.input_config
+        create_input(self.ecs_world, ServiceLocator.configs_service.get(input_config))
         self.do_create()
 
     def process_events(self, event: pygame.event.Event) -> None:
@@ -53,7 +50,7 @@ class Scene:
         """Crea las entidades de la escena."""
 
     def do_update(self, delta_time: float) -> None:
-        """Llama a los sistemas de la escena en cada paso fijo."""
+        """Llama a los sistemas de la escena en cada frame."""
 
     def do_draw(self, screen: pygame.Surface) -> None:
         # Los textos se actualizan justo antes de dibujar, así reflejan cualquier cambio del frame.

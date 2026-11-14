@@ -1,5 +1,4 @@
 """Pruebas del fondo de estrellas. Ejecutar con: python -m unittest discover -s tests"""
-import random
 import unittest
 
 import esper
@@ -52,7 +51,7 @@ class TestStarfield(unittest.TestCase):
 
     def test_parpadea_al_acabarse_el_tiempo(self):
         star = make_star(self.world, (100, 50), time_left=0.01)
-        system_starfield(self.world, 0.02, self.camera, BLINK, random.Random(1))
+        system_starfield(self.world, 0.02, self.camera, BLINK)
         c_star = self.world.component_for_entity(star, CStar)
         c_s = self.world.component_for_entity(star, CSurface)
         self.assertFalse(c_star.visible)
@@ -62,7 +61,7 @@ class TestStarfield(unittest.TestCase):
     def test_create_starfield_dentro_del_viewport_y_de_fondo(self):
         info = {"count": 30, "size": 1, "layers": [{"parallax": 0.25, "weight": 1}],
                 "colors": [{"r": 255, "g": 0, "b": 0}], "blink": BLINK}
-        stars = create_starfield(self.world, info, VIEWPORT, random.Random(2))
+        stars = create_starfield(self.world, info, VIEWPORT)
         self.assertEqual(len(stars), 30)
         for star in stars:
             self.assertTrue(VIEWPORT.collidepoint(self.pos(star)))

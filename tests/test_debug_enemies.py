@@ -1,6 +1,5 @@
 """Pruebas del modo de depuración de enemigos. Ejecutar con: python -m unittest discover -s tests"""
 import os
-import random
 import unittest
 import warnings
 
@@ -11,7 +10,7 @@ import pygame
 
 from src.ecs.components.c_enemy_state import CEnemyState, EnemyState
 from src.ecs.components.c_transform import CTransform
-from src.ecs.components.tags.c_tag_enemy import CTagEnemy, EnemyType
+from src.ecs.components.c_enemy import CEnemy, EnemyType
 from src.ecs.systems.s_debug_labels import enemy_label
 from src.engine.game_engine import GameEngine
 from src.engine.service_locator import ServiceLocator
@@ -33,7 +32,7 @@ class TestDebugEnemies(unittest.TestCase):
         self.scene.start()
 
     def enemy_types(self):
-        return [c_tag.enemy_type for _, c_tag in self.scene.ecs_world.get_component(CTagEnemy)]
+        return [c_tag.enemy_type for _, c_tag in self.scene.ecs_world.get_component(CEnemy)]
 
     def test_teclas_1_2_3_crean_enemigos_i_p_e(self):
         for key in (pygame.K_1, pygame.K_2, pygame.K_3):
@@ -44,27 +43,26 @@ class TestDebugEnemies(unittest.TestCase):
 
     def test_enemigo_creado_aparece_en_un_borde_y_se_mueve(self):
         self.scene.process_events(key_event(pygame.KEYDOWN, pygame.K_1))
-        entity, _ = self.scene.ecs_world.get_component(CTagEnemy)[0]
+        entity, _ = self.scene.ecs_world.get_component(CEnemy)[0]
         pos = pygame.Vector2(self.scene.ecs_world.component_for_entity(entity, CTransform).pos)
         rect = self.scene.screen_rect
         self.assertTrue(pos.x in (0, rect.width - 8) or pos.y in (0, rect.height - 8))
-        self.scene.simulate(self.engine.fixed_dt)
-        self.scene.simulate(self.engine.fixed_dt)
+        self.scene.simulate(1 / 60)
+        self.scene.simulate(1 / 60)
         self.assertNotEqual(self.scene.ecs_world.component_for_entity(entity, CTransform).pos, pos)
         self.scene.do_draw(self.engine.screen)
 
     def test_posicion_en_borde_queda_dentro_de_la_pantalla(self):
         rect = pygame.Rect(0, 0, 256, 208)
         size = pygame.Vector2(8, 8)
-        rng = random.Random(1)
         for _ in range(100):
-            pos = random_edge_position(rect, size, rng)
+            pos = random_edge_position(rect, size)
             self.assertTrue(0 <= pos.x <= rect.width - size.x and 0 <= pos.y <= rect.height - size.y)
             self.assertTrue(pos.x in (0, rect.width - size.x) or pos.y in (0, rect.height - size.y))
 
     def test_etiqueta_muestra_tipo_y_estado(self):
         c_es = CEnemyState(EnemyState.LEAVE, {}, {})
-        self.assertEqual(enemy_label(CTagEnemy(EnemyType.I, 50), c_es), "I LEAVE")
+        self.assertEqual(enemy_label(CEnemy(EnemyType.I, 50), c_es), "I LEAVE")
 
 
 if __name__ == "__main__":

@@ -9,15 +9,13 @@ from src.ecs.components.c_surface import CSurface
 from src.ecs.components.c_transform import CTransform
 
 
-def system_starfield(world: esper.World, delta_time: float, camera: CCamera, blink_info: dict,
-                     rng: random.Random | None = None) -> None:
+def system_starfield(world: esper.World, delta_time: float, camera: CCamera, blink_info: dict) -> None:
     """Mueve las estrellas al contrario de la cámara y las hace parpadear.
 
     Parallax: cada estrella se mueve solo una fracción (parallax) de lo que se movió
     la cámara, así parece que está más lejos que el resto del mundo. Va después de
     system_camera, que calcula camera.last_move.
     """
-    rng = rng or random
     view = camera.viewport
     components = world.get_components(CTransform, CSurface, CStar)
     c_t: CTransform
@@ -33,6 +31,6 @@ def system_starfield(world: esper.World, delta_time: float, camera: CCamera, bli
         if c_star.time_left <= 0:
             c_star.visible = not c_star.visible
             times = blink_info["on"] if c_star.visible else blink_info["off"]
-            c_star.time_left = rng.uniform(times["min"], times["max"])
+            c_star.time_left = random.uniform(times["min"], times["max"])
             # Apagar es dejarla transparente: así system_rendering no necesita saber de estrellas.
             c_s.surf.set_alpha(255 if c_star.visible else 0)

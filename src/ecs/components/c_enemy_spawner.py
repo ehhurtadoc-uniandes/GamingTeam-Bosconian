@@ -1,4 +1,4 @@
-from src.ecs.components.tags.c_tag_enemy import EnemyType
+from src.ecs.components.c_enemy import EnemyType
 
 
 class CEnemySpawner:

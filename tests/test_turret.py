@@ -1,6 +1,5 @@
 """Pruebas de las torretas que disparan y sus balas (#20). Ejecutar con: python -m unittest discover -s tests"""
 import os
-import random
 import unittest
 import warnings
 
@@ -20,14 +19,15 @@ from src.ecs.components.c_transform import CTransform
 from src.ecs.components.c_turret import CTurret, TurretState
 from src.ecs.components.c_velocity import CVelocity
 from src.ecs.components.tags.c_tag_base import CTagBaseTurret
-from src.ecs.components.tags.c_tag_enemy import CTagEnemy, CTagEnemyBullet, EnemyType
+from src.ecs.components.c_enemy import CEnemy, EnemyType
+from src.ecs.components.tags.c_tag_enemy_bullet import CTagEnemyBullet
 from src.ecs.systems.s_enemy_bullet_collision import system_enemy_bullet_collision
 from src.ecs.systems.s_lifetime import system_lifetime
+from src.ecs.systems.s_offscreen_despawn import system_offscreen_despawn
 from src.ecs.systems.s_movement import system_movement
 from src.ecs.systems.s_turret import system_turret
 from src.engine.game_engine import GameEngine
 from src.engine.service_locator import ServiceLocator
-from src.scenes.play_scene import BASE_CONFIG
 from tests.test_base import BASE_INFO, center_of
 
 BULLET_INFO = {"size": {"w": 2, "h": 2}, "color": {"r": 255, "g": 255, "b": 0}, "speed": 100, "lifetime": 1.0}
@@ -128,8 +128,7 @@ class TestSystemTurret(unittest.TestCase):
 class TestTorretasDeBase(unittest.TestCase):
     def test_torretas_de_una_base_tienen_ritmos_distintos(self):
         world = esper.World()
-        base = create_base(world, BASE_INFO, pygame.Vector2(100, 100), BaseOrientation.HORIZONTAL,
-                           random.Random(1))
+        base = create_base(world, BASE_INFO, pygame.Vector2(100, 100), BaseOrientation.HORIZONTAL)
         turrets = [world.component_for_entity(t, CTurret) for t in world.component_for_entity(base, CBase).turrets]
         intervals = [t.fire_interval for t in turrets]
         self.assertEqual(len(set(intervals)), 6)
@@ -142,22 +141,15 @@ class TestTorretasDeBase(unittest.TestCase):
             self.assertEqual(c_tu.open_surf.get_at((0, 0)), (255, 128, 0))
             self.assertEqual(c_tu.closed_surf.get_at((0, 0)), (255, 255, 255))
 
-    def test_misma_semilla_mismo_ritmo(self):
-        def intervals(seed):
-            world = esper.World()
-            create_base(world, BASE_INFO, pygame.Vector2(0, 0), BaseOrientation.HORIZONTAL, random.Random(seed))
-            return [c.fire_interval for _, c in world.get_component(CTurret)]
-        self.assertEqual(intervals(7), intervals(7))
-
     def test_aspecto_abierto_rota_con_la_base_vertical(self):
         world = esper.World()
-        create_base(world, BASE_INFO, pygame.Vector2(0, 0), BaseOrientation.VERTICAL, random.Random(0))
+        create_base(world, BASE_INFO, pygame.Vector2(0, 0), BaseOrientation.VERTICAL)
         for _, c_tu in world.get_component(CTurret):
             self.assertEqual(c_tu.open_surf.get_size(), (6, 10))
 
     def test_no_disparan_todas_a_la_vez(self):
         world = esper.World()
-        create_base(world, BASE_INFO, pygame.Vector2(100, 100), BaseOrientation.HORIZONTAL, random.Random(3))
+        create_base(world, BASE_INFO, pygame.Vector2(100, 100), BaseOrientation.HORIZONTAL)
         fired_per_step = []
         for _ in range(20):
             before = len(bullets(world))
@@ -181,7 +173,8 @@ class TestBalas(unittest.TestCase):
 
     def simulate(self, delta_time, screen_rect=None):
         system_movement(self.world, delta_time)
-        system_lifetime(self.world, delta_time, screen_rect)
+        system_lifetime(self.world, delta_time)
+        system_offscreen_despawn(self.world, screen_rect)
         system_enemy_bullet_collision(self.world)
         self.world._clear_dead_entities()
 
@@ -217,7 +210,7 @@ class TestBalas(unittest.TestCase):
         b = create_enemy(self.world, ENEMIES_INFO, pygame.Vector2(0, 0), EnemyType.I)
         create_turret_bullet(self.world, BULLET_INFO, pygame.Vector2(4, 4), pygame.Vector2(1, 0))
         self.simulate(0.0)
-        self.assertEqual(len(self.world.get_component(CTagEnemy)), 1)
+        self.assertEqual(len(self.world.get_component(CEnemy)), 1)
         self.assertNotEqual(self.world.entity_exists(a), self.world.entity_exists(b))
 
     def test_bala_vencida_ya_no_mata(self):
@@ -246,7 +239,7 @@ class TestTorretasEnPlayScene(unittest.TestCase):
         self.scene = self.engine._scenes["play"]
 
     def test_config_real_tiene_torreta_y_bala(self):
-        base_info = ServiceLocator.configs_service.get(BASE_CONFIG)
+        base_info = ServiceLocator.configs_service.get(ServiceLocator.constants_service.base_config)
         turret = base_info["turret"]
         self.assertGreater(turret["activation_distance"], 0)
         self.assertLessEqual(turret["fire_interval"]["min"], turret["fire_interval"]["max"])
@@ -262,8 +255,8 @@ class TestTorretasEnPlayScene(unittest.TestCase):
         base_center = center_of(world, sorted(e for e, _ in world.get_component(CBase))[0])
         world.component_for_entity(player, CTransform).pos = pygame.Vector2(base_center) + pygame.Vector2(0, 30)
         world.remove_component(player, CVelocity)
-        for _ in range(int(3 / self.engine.fixed_dt)):
-            self.scene.simulate(self.engine.fixed_dt)
+        for _ in range(3 * 60):
+            self.scene.simulate(1 / 60)
         self.assertTrue(any(c.state == TurretState.OPEN for _, c in world.get_component(CTurret)))
         self.assertGreater(len(world.get_component(CTagEnemyBullet)), 0)
         self.scene.do_draw(self.engine.screen)

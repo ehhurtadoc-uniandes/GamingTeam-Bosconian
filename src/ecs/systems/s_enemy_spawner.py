@@ -12,7 +12,7 @@ import pygame
 from src.create.prefab_enemy import create_enemy
 from src.ecs.components.c_camera import CCamera
 from src.ecs.components.c_enemy_spawner import CEnemySpawner
-from src.ecs.components.tags.c_tag_enemy import CTagEnemy, EnemyType
+from src.ecs.components.c_enemy import CEnemy, EnemyType
 from src.ecs.systems.s_camera import view_top_left
 from src.utils.wrap import wrap_position
 
@@ -60,7 +60,7 @@ def system_enemy_spawner(world: esper.World, delta_time: float, camera: CCamera,
         if c_sp.time_to_spawn > 0:
             continue
         c_sp.time_to_spawn += c_sp.interval
-        if len(world.get_component(CTagEnemy)) >= c_sp.max_alive:
+        if len(world.get_component(CEnemy)) >= c_sp.max_alive:
             continue
         enemy_type = pick_enemy_type(c_sp.weights, rng)
         size_info = enemies_info[enemy_type.value]["size"]

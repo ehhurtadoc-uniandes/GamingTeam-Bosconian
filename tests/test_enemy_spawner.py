@@ -18,7 +18,7 @@ from src.ecs.components.c_camera import CCamera
 from src.ecs.components.c_enemy_spawner import CEnemySpawner
 from src.ecs.components.c_enemy_state import CEnemyState
 from src.ecs.components.c_transform import CTransform
-from src.ecs.components.tags.c_tag_enemy import CTagEnemy, EnemyType
+from src.ecs.components.c_enemy import CEnemy, EnemyType
 from src.ecs.systems.s_camera import is_visible
 from src.ecs.systems.s_enemy_spawner import offscreen_offset, pick_enemy_type, system_enemy_spawner
 from src.engine.game_engine import GameEngine
@@ -120,7 +120,7 @@ class TestSystemEnemySpawner(unittest.TestCase):
     def test_respeta_el_maximo_de_enemigos_vivos(self):
         world = make_world({"max_alive": 3})
         run(world, 30)
-        self.assertEqual(len(world.get_component(CTagEnemy)), 3)
+        self.assertEqual(len(world.get_component(CEnemy)), 3)
 
     def test_vuelve_a_salir_cuando_muere_uno(self):
         world = make_world({"max_alive": 2})
@@ -156,7 +156,7 @@ class TestSystemEnemySpawner(unittest.TestCase):
         c_es = world.component_for_entity(entity, CEnemyState)
         expected = ENEMIES["I"]["states"]["CHASE"]["wander_strength"] * 0.5
         self.assertAlmostEqual(c_es.states_info["CHASE"]["wander_strength"], expected)
-        self.assertEqual(world.component_for_entity(entity, CTagEnemy).enemy_type, EnemyType.I)
+        self.assertEqual(world.component_for_entity(entity, CEnemy).enemy_type, EnemyType.I)
 
 
 class TestSpawnerEnPlayScene(unittest.TestCase):
@@ -169,10 +169,10 @@ class TestSpawnerEnPlayScene(unittest.TestCase):
         self.scene.start()
 
     def test_el_nivel_de_prueba_hace_aparecer_enemigos_con_el_tiempo(self):
-        self.assertEqual(self.scene.ecs_world.get_component(CTagEnemy), [])
-        for _ in range(round(6 / self.engine.fixed_dt)):
-            self.scene.simulate(self.engine.fixed_dt)
-        self.assertGreater(len(self.scene.ecs_world.get_component(CTagEnemy)), 0)
+        self.assertEqual(self.scene.ecs_world.get_component(CEnemy), [])
+        for _ in range(round(6 / DT)):
+            self.scene.simulate(DT)
+        self.assertGreater(len(self.scene.ecs_world.get_component(CEnemy)), 0)
         self.scene.do_draw(self.engine.screen)
 
 

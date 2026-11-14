@@ -17,15 +17,11 @@ class EnemyState(Enum):
     STRAIGHT = "STRAIGHT"
 
 
-# Atributos de CSteering que cada estado puede sobrescribir al entrar.
-STEERING_OVERRIDES = ("seek_weight", "flee_weight", "wander_strength", "max_force")
-
-
 class CEnemyState:
     """Estado actual de la IA de un enemigo.
 
     - base_steering: valores de steering del tipo; al entrar a un estado se
-      restauran y luego se aplican los del estado (ver STEERING_OVERRIDES).
+      restauran y luego se aplican los del estado (ver change_state en s_enemy_state).
     - states_info: configuración de cada estado (sale de enemies.json).
     - time_in_state: segundos desde que entró al estado actual.
     """

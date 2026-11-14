@@ -12,7 +12,7 @@ from src.create.prefab_stars import create_starfield
 from src.ecs.components.c_input_command import CInputCommand, CommandPhase
 from src.ecs.components.c_surface import CSurface
 from src.ecs.components.c_transform import CTransform
-from src.ecs.components.tags.c_tag_enemy import EnemyType
+from src.ecs.components.c_enemy import EnemyType
 from src.ecs.systems.s_camera import get_camera, system_camera, view_top_left
 from src.ecs.systems.s_debug_labels import system_enemy_labels
 from src.ecs.systems.s_enemy_bullet_collision import system_enemy_bullet_collision
@@ -20,6 +20,7 @@ from src.ecs.systems.s_enemy_spawner import system_enemy_spawner
 from src.ecs.systems.s_enemy_state import system_enemy_state
 from src.ecs.systems.s_lifetime import system_lifetime
 from src.ecs.systems.s_movement import system_movement
+from src.ecs.systems.s_offscreen_despawn import system_offscreen_despawn
 from src.ecs.systems.s_player_movement import system_player_acceleration, system_player_direction
 from src.ecs.systems.s_score import system_score_hud
 from src.ecs.systems.s_starfield import system_starfield
@@ -30,54 +31,28 @@ from src.engine.scenes.scene import Scene
 from src.engine.service_locator import ServiceLocator
 from src.utils.wrap import wrap_position, world_size_from_config
 
-PLAYER_CONFIG = "assets/cfg/player.json"
-ENEMIES_CONFIG = "assets/cfg/enemies.json"
-DEBUG_CONFIG = "assets/cfg/debug.json"
-BASE_CONFIG = "assets/cfg/base.json"
-LEVELS_CONFIG = "assets/cfg/levels.json"
-WORLD_CONFIG = "assets/cfg/world.json"
-STARS_CONFIG = "assets/cfg/stars.json"
-SCORE_CONFIG = "assets/cfg/score.json"
-SPAWNER_CONFIG = "assets/cfg/spawner.json"
-
-DIRECTION_COMMANDS = {
-    "PLAYER_UP": pygame.Vector2(0, -1),
-    "PLAYER_DOWN": pygame.Vector2(0, 1),
-    "PLAYER_LEFT": pygame.Vector2(-1, 0),
-    "PLAYER_RIGHT": pygame.Vector2(1, 0),
-}
-
 
 def direction_from_commands(active_commands: set[str]) -> pygame.Vector2:
     """Suma las direcciones de los comandos presionados; dos opuestas se anulan."""
+    direction_commands = ServiceLocator.constants_service.direction_commands
     direction = pygame.Vector2(0, 0)
     for name in active_commands:
-        direction += DIRECTION_COMMANDS[name]
+        direction += direction_commands[name]
     return direction
 
 
-# Con el modo de depuración, estas teclas crean enemigos a pedido, además de los del spawner (#28).
-DEBUG_SPAWN_COMMANDS = {
-    "DEBUG_SPAWN_I": EnemyType.I,
-    "DEBUG_SPAWN_P": EnemyType.P,
-    "DEBUG_SPAWN_E": EnemyType.E,
-}
-
-
-def random_edge_position(screen_rect: pygame.Rect, size: pygame.Vector2,
-                         rng: random.Random | None = None) -> pygame.Vector2:
+def random_edge_position(screen_rect: pygame.Rect, size: pygame.Vector2) -> pygame.Vector2:
     """Posición al azar pegada a uno de los cuatro bordes de la pantalla, dentro de ella."""
-    rng = rng or random
     max_x = screen_rect.width - size.x
     max_y = screen_rect.height - size.y
-    side = rng.choice(("top", "bottom", "left", "right"))
+    side = random.choice(("top", "bottom", "left", "right"))
     if side == "top":
-        return pygame.Vector2(rng.uniform(0, max_x), 0)
+        return pygame.Vector2(random.uniform(0, max_x), 0)
     if side == "bottom":
-        return pygame.Vector2(rng.uniform(0, max_x), max_y)
+        return pygame.Vector2(random.uniform(0, max_x), max_y)
     if side == "left":
-        return pygame.Vector2(0, rng.uniform(0, max_y))
-    return pygame.Vector2(max_x, rng.uniform(0, max_y))
+        return pygame.Vector2(0, random.uniform(0, max_y))
+    return pygame.Vector2(max_x, random.uniform(0, max_y))
 
 
 class PlayScene(Scene):
@@ -95,30 +70,32 @@ class PlayScene(Scene):
         self._held_direction_keys: set[tuple[str, int]] = set()
 
     def do_create(self) -> None:
+        constants = ServiceLocator.constants_service
         self._held_direction_keys.clear()
         # Las estrellas se crean primero; igual system_rendering las dibuja siempre debajo (CTagBackground).
-        world_info = ServiceLocator.configs_service.get(WORLD_CONFIG)
+        world_info = ServiceLocator.configs_service.get(constants.world_config)
         self.world_size = world_size_from_config(world_info)
         self._create_level()
-        player_info = ServiceLocator.configs_service.get(PLAYER_CONFIG)
+        player_info = ServiceLocator.configs_service.get(constants.player_config)
         size = player_info["size"]
         pos = pygame.Vector2(self.screen_rect.center) - pygame.Vector2(size["w"], size["h"]) / 2
         self._player_entity = create_player(self.ecs_world, player_info, pos)
         player_center = pos + pygame.Vector2(size["w"], size["h"]) / 2
         create_camera(self.ecs_world, world_info["camera"], self.world_size, player_center)
-        self._stars_info = ServiceLocator.configs_service.get(STARS_CONFIG)
+        self._stars_info = ServiceLocator.configs_service.get(constants.stars_config)
         create_starfield(self.ecs_world, self._stars_info, get_camera(self.ecs_world).viewport)
-        self._debug_info = ServiceLocator.configs_service.get(DEBUG_CONFIG)
-        create_score_hud(self.ecs_world, ServiceLocator.configs_service.get(SCORE_CONFIG)["hud"])
+        self._debug_info = ServiceLocator.configs_service.get(constants.debug_config)
+        create_score_hud(self.ecs_world, ServiceLocator.configs_service.get(constants.score_config)["hud"])
 
     def _create_level(self) -> None:
         """Crea las entidades del nivel actual según su JSON: las bases y el spawner de enemigos."""
-        level_path = ServiceLocator.configs_service.get(LEVELS_CONFIG)["levels"][self.level_index]
+        constants = ServiceLocator.constants_service
+        level_path = ServiceLocator.configs_service.get(constants.levels_config)["levels"][self.level_index]
         level_info = ServiceLocator.configs_service.get(level_path)
-        base_info = ServiceLocator.configs_service.get(BASE_CONFIG)
+        base_info = ServiceLocator.configs_service.get(constants.base_config)
         self._bullet_info = base_info["bullet"]
-        self._enemies_info = ServiceLocator.configs_service.get(ENEMIES_CONFIG)
-        self._spawn_margin = ServiceLocator.configs_service.get(SPAWNER_CONFIG)["offscreen_margin"]
+        self._enemies_info = ServiceLocator.configs_service.get(constants.enemies_config)
+        self._spawn_margin = ServiceLocator.configs_service.get(constants.spawner_config)["offscreen_margin"]
         try:
             create_bases(self.ecs_world, base_info, level_info)
             create_enemy_spawner(self.ecs_world, level_info)
@@ -145,11 +122,12 @@ class PlayScene(Scene):
         # La cámara sigue al jugador ya movido, para que no se vea un frame atrasada.
         system_camera(self.ecs_world, player_pos + pygame.Vector2(player_size) / 2)
         system_starfield(self.ecs_world, delta_time, get_camera(self.ecs_world), self._stars_info["blink"])
-        # "Salir de la pantalla" es salir de lo que ve la cámara.
-        system_lifetime(self.ecs_world, delta_time, camera=get_camera(self.ecs_world))
+        system_lifetime(self.ecs_world, delta_time)
+        # "Salir de la pantalla" es salir de lo que ve la cámara (el área de juego), no de la ventana.
+        system_offscreen_despawn(self.ecs_world, camera=get_camera(self.ecs_world))
         system_enemy_bullet_collision(self.ecs_world)
         # Al final, para que el HUD muestre los puntos sumados en este paso.
-        system_score_hud(self.ecs_world, self.session)
+        system_score_hud(self.ecs_world)
 
     def do_draw(self, screen: pygame.Surface) -> None:
         super().do_draw(screen)
@@ -160,13 +138,15 @@ class PlayScene(Scene):
         color = pygame.Color(c["r"], c["g"], c["b"])
         system_enemy_labels(self.ecs_world, screen, font, color, get_camera(self.ecs_world))
         help_pos = self._debug_info["help_pos"]
-        screen.blit(font.render(self._debug_info["help_text"], False, color), (help_pos["x"], help_pos["y"]))
+        help_text = ServiceLocator.texts_service.get(font, self._debug_info["help_text"], color)
+        screen.blit(help_text, (help_pos["x"], help_pos["y"]))
 
     def do_action(self, action: CInputCommand) -> None:
-        if action.name in DEBUG_SPAWN_COMMANDS:
+        constants = ServiceLocator.constants_service
+        if action.name in constants.debug_spawn_commands:
             if action.phase == CommandPhase.START and self._debug_info["enabled"]:
-                self._spawn_debug_enemy(DEBUG_SPAWN_COMMANDS[action.name])
-        elif action.name in DIRECTION_COMMANDS:
+                self._spawn_debug_enemy(EnemyType(constants.debug_spawn_commands[action.name]))
+        elif action.name in constants.direction_commands:
             held = (action.name, action.key)
             if action.phase == CommandPhase.START:
                 self._held_direction_keys.add(held)
@@ -181,7 +161,7 @@ class PlayScene(Scene):
             self._held_direction_keys.clear()
 
     def _spawn_debug_enemy(self, enemy_type: EnemyType) -> int:
-        enemies_info = ServiceLocator.configs_service.get(ENEMIES_CONFIG)
+        enemies_info = ServiceLocator.configs_service.get(ServiceLocator.constants_service.enemies_config)
         size = enemies_info[enemy_type.value]["size"]
         camera = get_camera(self.ecs_world)
         view = pygame.Rect((0, 0), camera.viewport.size)
