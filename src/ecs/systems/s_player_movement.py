@@ -4,17 +4,16 @@ import pygame
 from src.ecs.components.c_player_movement import CPlayerMovement
 from src.ecs.components.c_velocity import CVelocity
 from src.ecs.components.tags.c_tag_player import CTagPlayer
-
-DEAD_ZONE = 0.3
+from src.engine.service_locator import ServiceLocator
 
 
 def snap_to_eight_directions(input_direction: pygame.Vector2) -> pygame.Vector2:
     """Lleva cada eje a -1, 0 o 1 para que el movimiento quede en 8 direcciones (LC-JUG-02).
 
-    Los ejes con magnitud menor a DEAD_ZONE se ignoran (drift de joystick).
+    Los ejes con magnitud menor a la zona muerta (ConstantsService.player_dead_zone) se ignoran (drift de joystick).
     """
     def axis(value: float) -> int:
-        if abs(value) < DEAD_ZONE:
+        if abs(value) < ServiceLocator.constants_service.player_dead_zone:
             return 0
         return 1 if value > 0 else -1
     return pygame.Vector2(axis(input_direction.x), axis(input_direction.y))

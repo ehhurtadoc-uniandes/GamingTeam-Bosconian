@@ -26,6 +26,11 @@ class ConstantsService:
         # en un solo paso sin que sus rectángulos (3 y 8 px) lleguen a tocarse.
         self.max_delta_time = 1 / 30
 
+        # Dirección del jugador si player.json no trae start_direction (o trae cero): hacia arriba.
+        self.player_default_direction = pygame.Vector2(0, -1)
+        # Ejes de input con magnitud menor a esto se ignoran (drift de joystick, LC-JUG-02).
+        self.player_dead_zone = 0.3
+
         # Una base de Bosconian siempre tiene seis torretas; base.json debe traer un offset para cada una.
         self.turrets_per_base = 6
 

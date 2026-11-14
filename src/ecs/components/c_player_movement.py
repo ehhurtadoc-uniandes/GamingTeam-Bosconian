@@ -1,6 +1,6 @@
 import pygame
 
-DEFAULT_DIRECTION = pygame.Vector2(0, -1)
+from src.engine.service_locator import ServiceLocator
 
 
 class CPlayerMovement:
@@ -16,7 +16,7 @@ class CPlayerMovement:
         start = movement_info.get("start_direction", {})
         direction = pygame.Vector2(start.get("x", 0), start.get("y", 0))
         if direction.length_squared() == 0:
-            direction = pygame.Vector2(DEFAULT_DIRECTION)
+            direction = pygame.Vector2(ServiceLocator.constants_service.player_default_direction)
         self.direction = direction.normalize()
         self.max_speed: float = movement_info["max_speed"]
         self.acceleration: float = movement_info.get("acceleration", 0.0)
