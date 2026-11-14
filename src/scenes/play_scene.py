@@ -3,28 +3,39 @@ import random
 import pygame
 
 from src.create.prefab_base import create_bases
+from src.create.prefab_camera import create_camera
 from src.create.prefab_enemy import create_enemy
+from src.create.prefab_hud import create_score_hud
 from src.create.prefab_player import create_player
+from src.create.prefab_stars import create_starfield
 from src.ecs.components.c_input_command import CInputCommand, CommandPhase
 from src.ecs.components.c_surface import CSurface
 from src.ecs.components.c_transform import CTransform
 from src.ecs.components.tags.c_tag_enemy import EnemyType
+from src.ecs.systems.s_camera import get_camera, system_camera, view_top_left
 from src.ecs.systems.s_debug_labels import system_enemy_labels
 from src.ecs.systems.s_enemy_bullet_collision import system_enemy_bullet_collision
 from src.ecs.systems.s_enemy_state import system_enemy_state
 from src.ecs.systems.s_lifetime import system_lifetime
 from src.ecs.systems.s_movement import system_movement
 from src.ecs.systems.s_player_movement import system_player_acceleration, system_player_direction
+from src.ecs.systems.s_score import system_score_hud
+from src.ecs.systems.s_starfield import system_starfield
 from src.ecs.systems.s_steering import system_steering
 from src.ecs.systems.s_turret import system_turret
+from src.ecs.systems.s_wraparound import system_wraparound
 from src.engine.scenes.scene import Scene
 from src.engine.service_locator import ServiceLocator
+from src.utils.wrap import wrap_position, world_size_from_config
 
 PLAYER_CONFIG = "assets/cfg/player.json"
 ENEMIES_CONFIG = "assets/cfg/enemies.json"
 DEBUG_CONFIG = "assets/cfg/debug.json"
 BASE_CONFIG = "assets/cfg/base.json"
 LEVELS_CONFIG = "assets/cfg/levels.json"
+WORLD_CONFIG = "assets/cfg/world.json"
+STARS_CONFIG = "assets/cfg/stars.json"
+SCORE_CONFIG = "assets/cfg/score.json"
 
 DIRECTION_COMMANDS = {
     "PLAYER_UP": pygame.Vector2(0, -1),
@@ -82,12 +93,20 @@ class PlayScene(Scene):
 
     def do_create(self) -> None:
         self._held_direction_keys.clear()
+        # Las estrellas se crean primero; igual system_rendering las dibuja siempre debajo (CTagBackground).
+        world_info = ServiceLocator.configs_service.get(WORLD_CONFIG)
+        self.world_size = world_size_from_config(world_info)
         self._create_level()
         player_info = ServiceLocator.configs_service.get(PLAYER_CONFIG)
         size = player_info["size"]
         pos = pygame.Vector2(self.screen_rect.center) - pygame.Vector2(size["w"], size["h"]) / 2
         self._player_entity = create_player(self.ecs_world, player_info, pos)
+        player_center = pos + pygame.Vector2(size["w"], size["h"]) / 2
+        create_camera(self.ecs_world, world_info["camera"], self.world_size, player_center)
+        self._stars_info = ServiceLocator.configs_service.get(STARS_CONFIG)
+        create_starfield(self.ecs_world, self._stars_info, get_camera(self.ecs_world).viewport)
         self._debug_info = ServiceLocator.configs_service.get(DEBUG_CONFIG)
+        create_score_hud(self.ecs_world, ServiceLocator.configs_service.get(SCORE_CONFIG)["hud"])
 
     def _create_level(self) -> None:
         """Crea las entidades del nivel actual según su JSON (por ahora, las bases)."""
@@ -103,18 +122,25 @@ class PlayScene(Scene):
     def do_update(self, delta_time: float) -> None:
         system_player_acceleration(self.ecs_world, delta_time)
         # Los enemigos persiguen la posición del jugador. El estado va antes que el
-        # steering porque ajusta sus pesos; world_size queda en None hasta el wraparound (#7).
+        # steering porque ajusta sus pesos. Con world_size persiguen cruzando los bordes.
         player_pos = self.ecs_world.component_for_entity(self._player_entity, CTransform).pos
-        system_enemy_state(self.ecs_world, delta_time, player_pos)
-        system_steering(self.ecs_world, delta_time, player_pos)
+        system_enemy_state(self.ecs_world, delta_time, player_pos, self.world_size)
+        system_steering(self.ecs_world, delta_time, player_pos, self.world_size)
         # Las torretas disparan antes del movimiento para que la bala nueva avance en este frame.
         player_size = self.ecs_world.component_for_entity(self._player_entity, CSurface).area.size
         player_center = player_pos + pygame.Vector2(player_size) / 2
-        system_turret(self.ecs_world, delta_time, player_center, self._bullet_info)
+        system_turret(self.ecs_world, delta_time, player_center, self._bullet_info, self.world_size)
         system_movement(self.ecs_world, delta_time)
-        # Sin cámara (#6), "salir de la pantalla" es salir de la ventana.
-        system_lifetime(self.ecs_world, delta_time, self.screen_rect)
+        # Justo después de mover: lo que salió por un borde vuelve por el opuesto.
+        system_wraparound(self.ecs_world, self.world_size)
+        # La cámara sigue al jugador ya movido, para que no se vea un frame atrasada.
+        system_camera(self.ecs_world, player_pos + pygame.Vector2(player_size) / 2)
+        system_starfield(self.ecs_world, delta_time, get_camera(self.ecs_world), self._stars_info["blink"])
+        # "Salir de la pantalla" es salir de lo que ve la cámara.
+        system_lifetime(self.ecs_world, delta_time, camera=get_camera(self.ecs_world))
         system_enemy_bullet_collision(self.ecs_world)
+        # Al final, para que el HUD muestre los puntos sumados en este paso.
+        system_score_hud(self.ecs_world, self.session)
 
     def do_draw(self, screen: pygame.Surface) -> None:
         super().do_draw(screen)
@@ -123,7 +149,7 @@ class PlayScene(Scene):
         font = ServiceLocator.fonts_service.get(self._debug_info["font"], self._debug_info["font_size"])
         c = self._debug_info["label_color"]
         color = pygame.Color(c["r"], c["g"], c["b"])
-        system_enemy_labels(self.ecs_world, screen, font, color)
+        system_enemy_labels(self.ecs_world, screen, font, color, get_camera(self.ecs_world))
         help_pos = self._debug_info["help_pos"]
         screen.blit(font.render(self._debug_info["help_text"], False, color), (help_pos["x"], help_pos["y"]))
 
@@ -148,5 +174,9 @@ class PlayScene(Scene):
     def _spawn_debug_enemy(self, enemy_type: EnemyType) -> int:
         enemies_info = ServiceLocator.configs_service.get(ENEMIES_CONFIG)
         size = enemies_info[enemy_type.value]["size"]
-        pos = random_edge_position(self.screen_rect, pygame.Vector2(size["w"], size["h"]))
+        camera = get_camera(self.ecs_world)
+        view = pygame.Rect((0, 0), camera.viewport.size)
+        # Borde de lo que se ve, pasado a coordenadas de mundo.
+        pos = view_top_left(camera) + random_edge_position(view, pygame.Vector2(size["w"], size["h"]))
+        wrap_position(pos, self.world_size)
         return create_enemy(self.ecs_world, enemies_info, pos, enemy_type)

@@ -26,6 +26,7 @@ class Scene:
         self.ecs_world = esper.World()
         self._game_engine = game_engine
         self.screen_rect = game_engine.screen.get_rect()
+        self.session = game_engine.session
 
     def start(self) -> None:
         # Todas las escenas reciben los mismos comandos; cada una decide en do_action cuáles usa.

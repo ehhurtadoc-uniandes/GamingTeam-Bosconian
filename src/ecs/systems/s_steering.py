@@ -12,6 +12,7 @@ import pygame
 from src.ecs.components.c_steering import CSteering
 from src.ecs.components.c_transform import CTransform
 from src.ecs.components.c_velocity import CVelocity
+from src.utils.wrap import wrapped_delta  
 
 
 def truncate(vector: pygame.Vector2, max_length: float) -> pygame.Vector2:
@@ -20,22 +21,6 @@ def truncate(vector: pygame.Vector2, max_length: float) -> pygame.Vector2:
     if result.length_squared() > max_length * max_length:
         result.scale_to_length(max_length)
     return result
-
-
-def wrapped_delta(origin: pygame.Vector2, target: pygame.Vector2,
-                  world_size: pygame.Vector2 | None = None) -> pygame.Vector2:
-    """Vector de origin a target.
-
-    Si se da world_size, el mundo se trata como toroidal (wraparound, RF-06) y
-    se devuelve el camino más corto, que puede cruzar un borde.
-    """
-    delta = target - origin
-    if world_size is not None:
-        if abs(delta.x) > world_size.x / 2:
-            delta.x -= math.copysign(world_size.x, delta.x)
-        if abs(delta.y) > world_size.y / 2:
-            delta.y -= math.copysign(world_size.y, delta.y)
-    return delta
 
 
 def seek(to_target: pygame.Vector2, velocity: pygame.Vector2, max_speed: float) -> pygame.Vector2:
