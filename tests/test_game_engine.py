@@ -10,11 +10,13 @@ import pygame
 
 from src.create.prefab_enemy import create_enemy
 from src.ecs.components.c_transform import CTransform
-from src.ecs.components.tags.c_tag_enemy import EnemyType
+from src.ecs.components.c_enemy import EnemyType
 from src.ecs.components.tags.c_tag_player import CTagPlayer
 from src.engine.game_engine import GameEngine
 from src.engine.scenes.scene import Scene
 from src.engine.service_locator import ServiceLocator
+
+DT = 1 / 60
 
 
 class FakeScene(Scene):
@@ -48,23 +50,30 @@ class TestGameEngine(unittest.TestCase):
 
     def test_ventana_usa_la_configuracion(self):
         self.assertEqual(self.engine.screen.get_size(), (256, 208))
-        self.assertAlmostEqual(self.engine.fixed_dt, 1 / 60)
+        self.assertEqual(self.engine.framerate, 60)
 
-    def test_update_corre_solo_pasos_completos(self):
-        self.engine._add_frame_time(self.engine.fixed_dt * 2.5)
+    def test_calculate_time_espera_hasta_completar_el_frame(self):
+        self.engine._calculate_time()
+        self.engine._calculate_time()
+        # Con tick_busy_loop el frame dura al menos 1/framerate (con 1 ms de redondeo de pygame).
+        self.assertGreaterEqual(self.engine.delta_time, 1 / 60 - 0.001)
+
+    def test_frame_largo_se_acota(self):
+        self.engine.clock.tick()
+        pygame.time.wait(300)
+        self.engine._calculate_time()
+        self.assertEqual(self.engine.delta_time, ServiceLocator.constants_service.max_delta_time)
+
+    def test_update_simula_una_vez_con_el_delta_del_frame(self):
+        self.engine.delta_time = 0.02
         self.engine._update()
-        self.assertEqual(self.scene_a.calls, [("update", self.engine.fixed_dt)] * 2)
-        self.assertAlmostEqual(self.engine._accumulator, self.engine.fixed_dt * 0.5)
-
-    def test_frame_largo_se_limita(self):
-        self.engine._add_frame_time(10)
-        self.assertEqual(self.engine._accumulator, self.engine.max_frame_time)
+        self.assertEqual(self.scene_a.calls, [("update", 0.02)])
 
     def test_cambio_de_escena_es_diferido(self):
         self.engine.switch_scene("b")
-        self.engine._add_frame_time(self.engine.fixed_dt)
+        self.engine.delta_time = DT
         self.engine._update()
-        self.assertEqual(self.scene_a.calls, [("update", self.engine.fixed_dt)])
+        self.assertEqual(self.scene_a.calls, [("update", DT)])
         self.engine._handle_switch_scene()
         self.assertEqual(self.scene_a.calls[-1], "clean")
         self.assertEqual(self.scene_b.calls, ["create"])
@@ -88,7 +97,7 @@ class TestScene(unittest.TestCase):
         scene = Scene(self.engine)
         entity = scene.ecs_world.create_entity(CTransform(pygame.Vector2(0, 0)))
         scene.ecs_world.delete_entity(entity)
-        scene.simulate(self.engine.fixed_dt)
+        scene.simulate(DT)
         self.assertFalse(scene.ecs_world.entity_exists(entity))
 
     def test_clean_vacia_el_mundo(self):
@@ -101,7 +110,7 @@ class TestScene(unittest.TestCase):
         scene = self.engine._scenes["play"]
         scene.start()
         self.assertEqual(len(scene.ecs_world.get_component(CTagPlayer)), 1)
-        scene.simulate(self.engine.fixed_dt)
+        scene.simulate(DT)
         scene.do_draw(self.engine.screen)
 
     def test_escena_de_juego_mueve_enemigos_hacia_el_jugador_y_los_borra(self):
@@ -112,15 +121,15 @@ class TestScene(unittest.TestCase):
         enemy = create_enemy(scene.ecs_world, enemies_info, player_pos + pygame.Vector2(-60, 0), EnemyType.E)
         start = pygame.Vector2(scene.ecs_world.component_for_entity(enemy, CTransform).pos)
 
-        scene.simulate(self.engine.fixed_dt)
-        scene.simulate(self.engine.fixed_dt)
+        scene.simulate(DT)
+        scene.simulate(DT)
         pos = scene.ecs_world.component_for_entity(enemy, CTransform).pos
         self.assertGreater(pos.x, start.x)
 
         # E se elimina al agotar su tiempo; simulate limpia la entidad sin errores.
         duration = enemies_info["E"]["states"]["STRAIGHT"]["duration"]
-        for _ in range(int(duration / self.engine.fixed_dt) + 2):
-            scene.simulate(self.engine.fixed_dt)
+        for _ in range(int(duration / DT) + 2):
+            scene.simulate(DT)
         self.assertFalse(scene.ecs_world.entity_exists(enemy))
         self.assertTrue(scene.ecs_world.entity_exists(scene._player_entity))
 

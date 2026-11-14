@@ -2,6 +2,5 @@
   "title": "Proyecto final MISW4407",
   "size": { "w": 256, "h": 208 },
   "bg_color": { "r": 0, "g": 0, "b": 0 },
-  "framerate": 60,
-  "max_frame_time": 0.25
+  "framerate": 60
 }

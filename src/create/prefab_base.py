@@ -11,9 +11,6 @@ from src.ecs.components.c_turret import CTurret
 from src.ecs.components.tags.c_tag_base import CTagBase, CTagBaseCore, CTagBaseTurret
 from src.engine.service_locator import ServiceLocator
 
-TURRETS_PER_BASE = 6
-
-
 def parse_orientation(value: str) -> BaseOrientation:
     """Convierte el texto del JSON en BaseOrientation, con un error claro si no es válido."""
     try:
@@ -34,12 +31,8 @@ def rotate_offset(offset: pygame.Vector2, orientation: BaseOrientation) -> pygam
     return pygame.Vector2(offset)
 
 
-def create_bases(world: esper.World, base_info: dict, level_info: dict,
-                 rng: random.Random | None = None) -> list[int]:
-    """Crea todas las bases de level_info["bases"]. Devuelve las entidades base.
-
-    rng sortea el ritmo de cada torreta; con una semilla las pruebas son reproducibles.
-    """
+def create_bases(world: esper.World, base_info: dict, level_info: dict) -> list[int]:
+    """Crea todas las bases de level_info["bases"]. Devuelve las entidades base."""
     bases = []
     for index, entry in enumerate(level_info.get("bases", [])):
         try:
@@ -47,20 +40,21 @@ def create_bases(world: esper.World, base_info: dict, level_info: dict,
         except (KeyError, ValueError) as error:
             raise ValueError(f"nivel: base #{index}: {error}") from error
         pos = entry["pos"]
-        bases.append(create_base(world, base_info, pygame.Vector2(pos["x"], pos["y"]), orientation, rng))
+        bases.append(create_base(world, base_info, pygame.Vector2(pos["x"], pos["y"]), orientation))
     return bases
 
 
 def create_base(world: esper.World, base_info: dict, center: pygame.Vector2,
-                orientation: BaseOrientation, rng: random.Random | None = None) -> int:
+                orientation: BaseOrientation) -> int:
     """Crea una base con centro en center (coordenadas de mundo): cuerpo, seis torretas y núcleo.
 
     base_info es assets/cfg/base.json. Ninguna pieza lleva CVelocity, así que los
     sistemas de movimiento y steering no las desplazan.
     """
     offsets = base_info["turret_offsets"]
-    if len(offsets) != TURRETS_PER_BASE:
-        raise ValueError(f"base.json: turret_offsets debe tener {TURRETS_PER_BASE} entradas, "
+    turrets_per_base = ServiceLocator.constants_service.turrets_per_base
+    if len(offsets) != turrets_per_base:
+        raise ValueError(f"base.json: turret_offsets debe tener {turrets_per_base} entradas, "
                          f"tiene {len(offsets)}")
 
     # El cuerpo se crea primero para que se dibuje debajo de las piezas.
@@ -73,8 +67,8 @@ def create_base(world: esper.World, base_info: dict, center: pygame.Vector2,
         turret = world.create_entity()
         _add_piece(world, turret, base_info["turret"], center,
                    pygame.Vector2(offset["x"], offset["y"]), orientation)
-        world.add_component(turret, CTagBaseTurret(base))
-        world.add_component(turret, _turret_state(world, turret, base_info["turret"], orientation, rng))
+        world.add_component(turret, CTagBaseTurret())
+        world.add_component(turret, _turret_state(world, turret, base_info["turret"], orientation))
         turrets.append(turret)
 
     core_info = base_info["core"]
@@ -82,24 +76,23 @@ def create_base(world: esper.World, base_info: dict, center: pygame.Vector2,
     core_offset = core_info.get("offset", {"x": 0, "y": 0})
     _add_piece(world, core, core_info, center,
                pygame.Vector2(core_offset["x"], core_offset["y"]), orientation)
-    world.add_component(core, CTagBaseCore(base))
+    world.add_component(core, CTagBaseCore())
 
     world.add_component(base, CBase(orientation, turrets, core))
     return base
 
 
 def _turret_state(world: esper.World, turret: int, turret_info: dict,
-                  orientation: BaseOrientation, rng: random.Random | None) -> CTurret:
+                  orientation: BaseOrientation) -> CTurret:
     """CTurret con un intervalo sorteado en fire_interval y un desfase inicial al azar.
 
     La torreta se crea cerrada, con el aspecto de turret_info (color o image);
     abierta usa open_color u open_image.
     """
-    rng = rng or random
     interval_info = turret_info["fire_interval"]
     if not 0 < interval_info["min"] <= interval_info["max"]:
         raise ValueError("base.json: turret.fire_interval necesita 0 < min <= max")
-    interval = rng.uniform(interval_info["min"], interval_info["max"])
+    interval = random.uniform(interval_info["min"], interval_info["max"])
     open_info = dict(turret_info)
     open_info.pop("image", None)
     if "open_image" in turret_info:
@@ -108,7 +101,7 @@ def _turret_state(world: esper.World, turret: int, turret_info: dict,
         open_info["color"] = turret_info["open_color"]
     closed_surf = world.component_for_entity(turret, CSurface).surf
     open_surf = _piece_surface(open_info, orientation).surf
-    return CTurret(turret_info["activation_distance"], interval, rng.uniform(0, interval),
+    return CTurret(turret_info["activation_distance"], interval, random.uniform(0, interval),
                    closed_surf, open_surf)
 
 

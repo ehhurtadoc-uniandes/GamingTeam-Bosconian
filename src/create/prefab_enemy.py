@@ -7,7 +7,7 @@ from src.ecs.components.c_steering import CSteering
 from src.ecs.components.c_surface import CSurface
 from src.ecs.components.c_transform import CTransform
 from src.ecs.components.c_velocity import CVelocity
-from src.ecs.components.tags.c_tag_enemy import CTagEnemy, EnemyType
+from src.ecs.components.c_enemy import CEnemy, EnemyType
 
 
 def create_enemy(world: esper.World, enemies_info: dict, pos: pygame.Vector2,
@@ -32,7 +32,7 @@ def create_enemy(world: esper.World, enemies_info: dict, pos: pygame.Vector2,
     world.add_component(entity, surface)
     world.add_component(entity, CSteering(info["steering"]))
     world.add_component(entity, CEnemyState(EnemyState(info["initial_state"]), info["steering"], states_info))
-    world.add_component(entity, CTagEnemy(enemy_type, info["points"]))
+    world.add_component(entity, CEnemy(enemy_type, info["points"]))
     return entity
 
 

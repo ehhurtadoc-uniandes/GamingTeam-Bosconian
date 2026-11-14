@@ -1,21 +1,16 @@
 import esper
 
+from src.ecs.components.c_score_text import CScoreText, ScoreKind
 from src.ecs.components.c_text import CText
-from src.ecs.components.tags.c_tag_score_text import CTagScoreText, ScoreKind
-from src.engine.game_session import GameSession
+from src.engine.service_locator import ServiceLocator
 
 
-def add_score(session: GameSession, points: int) -> None:
-    """Suma puntos al jugador. Si supera el HI-SCORE, este se actualiza al mismo tiempo (LC-PUN-03)."""
-    session.score += points
-    session.hi_score = max(session.hi_score, session.score)
-
-
-def system_score_hud(world: esper.World, session: GameSession) -> None:
-    """Muestra en el HUD el puntaje y el HI-SCORE de la sesión."""
-    components = world.get_components(CText, CTagScoreText)
+def system_score_hud(world: esper.World) -> None:
+    """Muestra en el HUD el puntaje y el HI-SCORE de GameStateService."""
+    game_state = ServiceLocator.game_state_service
+    components = world.get_components(CText, CScoreText)
     c_text: CText
-    c_tag: CTagScoreText
-    for _, (c_text, c_tag) in components:
-        value = session.score if c_tag.kind == ScoreKind.SCORE else session.hi_score
+    c_score: CScoreText
+    for _, (c_text, c_score) in components:
+        value = game_state.score if c_score.kind == ScoreKind.SCORE else game_state.hi_score
         c_text.text = str(value)

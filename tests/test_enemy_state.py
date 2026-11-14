@@ -13,7 +13,7 @@ from src.ecs.components.c_enemy_state import CEnemyState, EnemyState
 from src.ecs.components.c_steering import CSteering
 from src.ecs.components.c_transform import CTransform
 from src.ecs.components.c_velocity import CVelocity
-from src.ecs.components.tags.c_tag_enemy import CTagEnemy, EnemyType
+from src.ecs.components.c_enemy import CEnemy, EnemyType
 from src.ecs.systems.s_enemy_state import change_state, system_enemy_state
 from src.ecs.systems.s_steering import flee, system_steering, wrapped_delta
 
@@ -49,7 +49,7 @@ class TestEnemyState(unittest.TestCase):
         duration = self.enemies_info["I"]["states"]["CHASE"]["duration"]
         self._update(duration - 0.01)
         self.assertEqual(self._state(enemy).state, EnemyState.CHASE)
-        system_steering(self.world, 0.1, self.target, WORLD_SIZE, rng=random.Random(7))
+        system_steering(self.world, 0.1, self.target, WORLD_SIZE)
         self.assertGreater(self._velocity(enemy).vel.x, 0)
         self._update(0.02)
         self.assertEqual(self._state(enemy).state, EnemyState.LEAVE)
@@ -78,10 +78,10 @@ class TestEnemyState(unittest.TestCase):
             enemy = self._enemy(EnemyType.P)
             self._update(self.enemies_info["P"]["states"]["CHASE"]["duration"])
             self._velocity(enemy).vel = pygame.Vector2(50, 10)
-            rng = random.Random(7)
+            random.seed(7)  # el mismo azar para los dos objetivos
             for _ in range(30):
                 system_enemy_state(self.world, 1 / 60, target, WORLD_SIZE)
-                system_steering(self.world, 1 / 60, target, WORLD_SIZE, rng=rng)
+                system_steering(self.world, 1 / 60, target, WORLD_SIZE)
             results.append(pygame.Vector2(self._velocity(enemy).vel))
             self.assertNotEqual(results[-1], pygame.Vector2(50, 10))
         self.assertEqual(results[0], results[1])
@@ -89,9 +89,8 @@ class TestEnemyState(unittest.TestCase):
     def test_p_en_wander_desde_reposo_empieza_a_moverse_al_azar(self):
         enemy = self._enemy(EnemyType.P)
         self._update(self.enemies_info["P"]["states"]["CHASE"]["duration"])
-        rng = random.Random(7)
         for _ in range(60):
-            system_steering(self.world, 1 / 60, self.target, WORLD_SIZE, rng=rng)
+            system_steering(self.world, 1 / 60, self.target, WORLD_SIZE)
         self.assertGreater(self._velocity(enemy).vel.length(), 0)
 
     def test_e_apunta_una_vez_y_sigue_recto_aunque_el_jugador_se_mueva(self):
@@ -107,7 +106,7 @@ class TestEnemyState(unittest.TestCase):
         self.target = pygame.Vector2(50, 70)
         for _ in range(30):
             self._update(1 / 60)
-            system_steering(self.world, 1 / 60, self.target, WORLD_SIZE, rng=random.Random(7))
+            system_steering(self.world, 1 / 60, self.target, WORLD_SIZE)
             self.assertLess((self._velocity(enemy).vel - expected).length(), 1e-6)
             transform = self.world.component_for_entity(enemy, CTransform)
             transform.pos += self._velocity(enemy).vel / 60
@@ -216,7 +215,7 @@ class TestEnemyState(unittest.TestCase):
                 self.assertGreater(info["steering"]["max_speed"], 60)
                 enemy = self._enemy(enemy_type)
                 self.assertEqual(self._steering(enemy).max_speed, info["steering"]["max_speed"])
-                self.assertEqual(self.world.component_for_entity(enemy, CTagEnemy).points, points)
+                self.assertEqual(self.world.component_for_entity(enemy, CEnemy).points, points)
         self.assertGreater(self.enemies_info["E"]["steering"]["max_speed"],
                            self.enemies_info["I"]["steering"]["max_speed"])
 

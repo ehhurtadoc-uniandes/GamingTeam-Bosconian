@@ -6,7 +6,8 @@ from src.ecs.components.c_lifetime import CLifetime
 from src.ecs.components.c_surface import CSurface
 from src.ecs.components.c_transform import CTransform
 from src.ecs.components.c_velocity import CVelocity
-from src.ecs.components.tags.c_tag_enemy import CTagEnemyBullet
+from src.ecs.components.tags.c_tag_enemy_bullet import CTagEnemyBullet
+from src.ecs.components.tags.c_tag_offscreen_despawn import CTagOffscreenDespawn
 from src.engine.service_locator import ServiceLocator
 
 
@@ -32,6 +33,8 @@ def create_turret_bullet(world: esper.World, bullet_info: dict, center: pygame.V
     world.add_component(bullet, CTransform(pos))
     world.add_component(bullet, CVelocity(vel))
     world.add_component(bullet, surface)
+    # Se borra al salir del área de juego o al cumplir su tiempo, lo que pase primero.
     world.add_component(bullet, CLifetime(bullet_info["lifetime"]))
+    world.add_component(bullet, CTagOffscreenDespawn())
     world.add_component(bullet, CTagEnemyBullet())
     return bullet

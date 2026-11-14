@@ -15,7 +15,7 @@ sistema de combate, #16).
 import esper
 import pygame
 
-from src.ecs.components.c_enemy_state import STEERING_OVERRIDES, CEnemyState, EnemyState
+from src.ecs.components.c_enemy_state import CEnemyState, EnemyState
 from src.ecs.components.c_steering import CSteering
 from src.ecs.components.c_transform import CTransform
 from src.ecs.components.c_velocity import CVelocity
@@ -27,9 +27,14 @@ def change_state(c_es: CEnemyState, c_st: CSteering, new_state: EnemyState) -> N
     c_es.state = new_state
     c_es.time_in_state = 0.0
     c_es.entered = True
-    info = c_es.info()
-    for attr in STEERING_OVERRIDES:
-        setattr(c_st, attr, info.get(attr, c_es.base_steering.get(attr, 0.0)))
+    # Cada peso toma el valor que define el estado en enemies.json. Si el estado no lo
+    # define, vuelve al valor del tipo de enemigo, para no arrastrar el del estado anterior.
+    state_info = c_es.info()
+    base = c_es.base_steering
+    c_st.seek_weight = state_info.get("seek_weight", base.get("seek_weight", 0.0))
+    c_st.flee_weight = state_info.get("flee_weight", base.get("flee_weight", 0.0))
+    c_st.wander_strength = state_info.get("wander_strength", base.get("wander_strength", 0.0))
+    c_st.max_force = state_info.get("max_force", base.get("max_force", 0.0))
 
 
 def system_enemy_state(world: esper.World, delta_time: float, target: pygame.Vector2,
@@ -38,7 +43,6 @@ def system_enemy_state(world: esper.World, delta_time: float, target: pygame.Vec
 
     target es la posición del jugador; world_size activa el cálculo con wraparound.
     """
-    to_delete = []
     components = world.get_components(CTransform, CVelocity, CSteering, CEnemyState)
     c_t: CTransform
     c_v: CVelocity
@@ -58,10 +62,8 @@ def system_enemy_state(world: esper.World, delta_time: float, target: pygame.Vec
             _do_aim_state(c_es, c_st, c_v, to_target)
         elif c_es.state in (EnemyState.LEAVE, EnemyState.STRAIGHT):
             if _should_despawn(c_es, c_v, to_target):
-                to_delete.append(entity)
-
-    for entity in to_delete:
-        world.delete_entity(entity)
+                # El borrado es diferido: se puede borrar mientras se recorre el mundo.
+                world.delete_entity(entity)
 
 
 def _do_chase_state(c_es: CEnemyState, c_st: CSteering) -> None:
