@@ -3,20 +3,17 @@ import sys
 
 import pygame
 
-from src.engine.game_session import GameSession
 from src.engine.scenes.scene import Scene
 from src.engine.service_locator import ServiceLocator
 from src.scenes.play_scene import PlayScene
 
-WINDOW_CONFIG = "assets/cfg/window.json"
-SCORE_CONFIG = "assets/cfg/score.json"
-
 
 class GameEngine:
-    """Game loop con delta fijo y manejo de escenas (patrones Game Loop y Scene)."""
+    """Game loop a framerate fijo y manejo de escenas (patrones Game Loop y Scene)."""
 
     def __init__(self) -> None:
-        window = ServiceLocator.configs_service.get(WINDOW_CONFIG)
+        constants = ServiceLocator.constants_service
+        window = ServiceLocator.configs_service.get(constants.window_config)
         pygame.init()
         size = window["size"]
         # En web (pygbag) SCALED falla con "failed to create renderer"; ahí el navegador escala el canvas.
@@ -26,12 +23,10 @@ class GameEngine:
         color = window["bg_color"]
         self.bg_color = pygame.Color(color["r"], color["g"], color["b"])
         self.framerate: int = window["framerate"]
-        self.fixed_dt = 1 / self.framerate
-        self.max_frame_time: float = window["max_frame_time"]
         self.clock = pygame.time.Clock()
         self.is_running = False
-        self._accumulator = 0.0
-        self.session = GameSession(ServiceLocator.configs_service.get(SCORE_CONFIG))
+        self.delta_time = 0.0
+        ServiceLocator.game_state_service.load(ServiceLocator.configs_service.get(constants.score_config))
 
         self._scenes: dict[str, Scene] = {
             "play": PlayScene(self),
@@ -60,12 +55,17 @@ class GameEngine:
         self._scene_name_to_switch = new_scene_name
 
     def _calculate_time(self) -> None:
-        self.clock.tick(self.framerate)
-        self._add_frame_time(self.clock.get_time() / 1000)
-
-    def _add_frame_time(self, frame_time: float) -> None:
-        # Se limita para que, tras una pausa larga, el juego no corra cientos de pasos seguidos.
-        self._accumulator += min(frame_time, self.max_frame_time)
+        # tick_busy_loop espera hasta completar el frame de forma activa, así el framerate es más
+        # exacto que con tick, que duerme y puede despertarse tarde. En el navegador (pygbag) una
+        # espera activa congelaría la pestaña, así que ahí se usa tick.
+        if sys.platform == "emscripten":
+            milliseconds = self.clock.tick(self.framerate)
+        else:
+            milliseconds = self.clock.tick_busy_loop(self.framerate)
+        # tick limita qué tan rápido corre el juego, no cuánto puede durar un frame: si la ventana se
+        # arrastra o la pestaña se suspende, el siguiente frame mide segundos y todo saltaría de golpe
+        # (balas que atraviesan enemigos, tiempos de vida que vencen). Por eso se acota el delta.
+        self.delta_time = min(milliseconds / 1000, ServiceLocator.constants_service.max_delta_time)
 
     def _process_events(self) -> None:
         for event in pygame.event.get():
@@ -74,9 +74,7 @@ class GameEngine:
                 self.is_running = False
 
     def _update(self) -> None:
-        while self._accumulator >= self.fixed_dt:
-            self._current_scene.simulate(self.fixed_dt)
-            self._accumulator -= self.fixed_dt
+        self._current_scene.simulate(self.delta_time)
 
     def _draw(self) -> None:
         self.screen.fill(self.bg_color)

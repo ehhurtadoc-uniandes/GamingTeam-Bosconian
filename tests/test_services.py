@@ -15,6 +15,7 @@ from src.engine.services.configs_service import ConfigsService
 from src.engine.services.fonts_service import FontsService
 from src.engine.services.images_service import ImagesService
 from src.engine.services.sounds_service import SoundsService
+from src.engine.services.texts_service import TextsService
 
 
 class TestServices(unittest.TestCase):
@@ -55,6 +56,15 @@ class TestServices(unittest.TestCase):
         font = service.get(path, 8)
         self.assertIs(service.get(path, 8), font)
         self.assertIsNot(service.get(path, 16), font)
+
+    def test_texto_se_renderiza_una_sola_vez_por_texto_y_color(self):
+        font = pygame.font.Font(None, 12)
+        service = TextsService()
+        white = pygame.Color(255, 255, 255)
+        text = service.get(font, "HOLA", white)
+        self.assertIs(service.get(font, "HOLA", pygame.Color(255, 255, 255)), text)
+        self.assertIsNot(service.get(font, "CHAO", white), text)
+        self.assertIsNot(service.get(font, "HOLA", pygame.Color(255, 0, 0)), text)
 
     def test_config_se_carga_una_sola_vez(self):
         path = os.path.join(self.dir, "config.json")

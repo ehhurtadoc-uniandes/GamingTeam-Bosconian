@@ -1,5 +1,6 @@
 import json
 import unittest
+from pathlib import Path
 
 import esper
 import pygame
@@ -9,10 +10,16 @@ from src.ecs.components.c_player_movement import CPlayerMovement
 from src.ecs.components.c_transform import CTransform
 from src.ecs.components.c_velocity import CVelocity
 from src.ecs.systems.s_movement import system_movement
-from src.ecs.systems.s_player_movement import system_player_acceleration, system_player_direction
+from src.ecs.systems.s_player_movement import (snap_to_eight_directions, system_player_acceleration,
+                                               system_player_direction)
 
-with open("assets/cfg/player.json", encoding="utf-8") as f:
-    PLAYER_INFO = json.load(f)
+PLAYER_CFG = Path(__file__).resolve().parent.parent / "assets" / "cfg" / "player.json"
+PLAYER_INFO: dict = {}
+
+
+def setUpModule():
+    with open(PLAYER_CFG, encoding="utf-8") as f:
+        PLAYER_INFO.update(json.load(f))
 
 
 def make_player():
@@ -79,6 +86,44 @@ class TestPlayerMovement(unittest.TestCase):
         system_player_acceleration(world, 0.0)
         self.assertAlmostEqual(c_pm.speed, speed)
         self.assertAlmostEqual(world.component_for_entity(entity, CVelocity).vel.length(), speed)
+
+    def test_input_analogico_se_ajusta_a_ocho_direcciones(self):
+        world, entity = make_player()
+        c_pm = world.component_for_entity(entity, CPlayerMovement)
+        system_player_direction(world, pygame.Vector2(0.3, 0.95))
+        self.assertEqual(c_pm.direction, pygame.Vector2(1, 1).normalize())
+        system_player_direction(world, pygame.Vector2(0.1, -0.9))
+        self.assertEqual(c_pm.direction, pygame.Vector2(0, -1))
+
+    def test_drift_de_joystick_no_cambia_direccion(self):
+        world, entity = make_player()
+        c_pm = world.component_for_entity(entity, CPlayerMovement)
+        system_player_direction(world, pygame.Vector2(0.02, 0))
+        self.assertEqual(c_pm.direction, pygame.Vector2(0, -1))
+        self.assertEqual(snap_to_eight_directions(pygame.Vector2(0.05, -0.1)), pygame.Vector2(0, 0))
+
+    def test_solo_afecta_entidades_con_tag_player(self):
+        world, _ = make_player()
+        other = world.create_entity()
+        world.add_component(other, CPlayerMovement(PLAYER_INFO["movement"]))
+        system_player_direction(world, pygame.Vector2(1, 0))
+        self.assertEqual(world.component_for_entity(other, CPlayerMovement).direction, pygame.Vector2(0, -1))
+
+
+class TestCPlayerMovementConfig(unittest.TestCase):
+    def test_direccion_inicial_cero_usa_valor_por_defecto(self):
+        c_pm = CPlayerMovement({"max_speed": 60, "start_direction": {"x": 0, "y": 0}})
+        self.assertEqual(c_pm.direction, pygame.Vector2(0, -1))
+
+    def test_claves_opcionales_tienen_valor_por_defecto(self):
+        c_pm = CPlayerMovement({"max_speed": 60})
+        self.assertEqual(c_pm.speed, 0)
+        self.assertEqual(c_pm.acceleration, 0)
+        self.assertEqual(c_pm.direction, pygame.Vector2(0, -1))
+
+    def test_velocidad_inicial_se_limita_a_la_maxima(self):
+        c_pm = CPlayerMovement({"max_speed": 60, "initial_speed": 100})
+        self.assertEqual(c_pm.speed, 60)
 
 
 if __name__ == "__main__":

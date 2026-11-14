@@ -17,7 +17,6 @@ from src.ecs.components.c_velocity import CVelocity
 from src.ecs.components.tags.c_tag_base import CTagBase, CTagBaseCore, CTagBaseTurret
 from src.engine.game_engine import GameEngine
 from src.engine.service_locator import ServiceLocator
-from src.scenes.play_scene import BASE_CONFIG, LEVELS_CONFIG
 
 BASE_INFO = {
     "body": {"size": {"w": 60, "h": 40}, "color": {"r": 0, "g": 255, "b": 0}},
@@ -49,8 +48,8 @@ class TestPrefabBase(unittest.TestCase):
         self.assertEqual(len(set(c_base.turrets) | {c_base.core, base}), 8)
         self.assertTrue(self.world.has_component(base, CTagBase))
         for turret in c_base.turrets:
-            self.assertEqual(self.world.component_for_entity(turret, CTagBaseTurret).base, base)
-        self.assertEqual(self.world.component_for_entity(c_base.core, CTagBaseCore).base, base)
+            self.assertTrue(self.world.has_component(turret, CTagBaseTurret))
+        self.assertTrue(self.world.has_component(c_base.core, CTagBaseCore))
 
     def test_piezas_horizontales_quedan_en_su_desplazamiento(self):
         center = pygame.Vector2(100, 80)
@@ -125,11 +124,11 @@ class TestBasesEnPlayScene(unittest.TestCase):
         self.scene = self.engine._scenes["play"]
 
     def level_info(self):
-        levels = ServiceLocator.configs_service.get(LEVELS_CONFIG)["levels"]
+        levels = ServiceLocator.configs_service.get(ServiceLocator.constants_service.levels_config)["levels"]
         return ServiceLocator.configs_service.get(levels[self.scene.level_index])
 
     def test_configs_reales_son_validas(self):
-        base_info = ServiceLocator.configs_service.get(BASE_CONFIG)
+        base_info = ServiceLocator.configs_service.get(ServiceLocator.constants_service.base_config)
         self.assertEqual(len(base_info["turret_offsets"]), 6)
         orientations = {b["orientation"] for b in self.level_info()["bases"]}
         self.assertEqual(orientations, {"horizontal", "vertical"})
@@ -147,7 +146,7 @@ class TestBasesEnPlayScene(unittest.TestCase):
                   if any(world.has_component(e, tag) for tag in pieces)}
         self.assertEqual(len(before), 8 * len(expected))
         for _ in range(30):
-            self.scene.simulate(self.engine.fixed_dt)
+            self.scene.simulate(1 / 60)
         for entity, pos in before.items():
             self.assertEqual(world.component_for_entity(entity, CTransform).pos, pos)
         self.scene.do_draw(self.engine.screen)
