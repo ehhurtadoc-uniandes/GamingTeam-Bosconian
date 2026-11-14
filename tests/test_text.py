@@ -15,18 +15,35 @@ from src.ecs.components.c_transform import CTransform
 from src.ecs.components.tags.c_tag_ui import CTagUI
 from src.ecs.systems.s_rendering import system_rendering
 from src.ecs.systems.s_text import aligned_position, system_text
+from src.engine.scenes.scene import Scene
 from src.engine.service_locator import ServiceLocator
 
 WHITE = pygame.Color(255, 255, 255)
 RED = pygame.Color(255, 0, 0)
+BLACK = pygame.Color(0, 0, 0)
+
+
+def drawn_colors(surface):
+    """Colores que quedan al dibujar surface sobre un fondo negro."""
+    canvas = pygame.Surface(surface.get_size())
+    canvas.fill(BLACK)
+    canvas.blit(surface, (0, 0))
+    return {tuple(canvas.get_at((x, y))) for x in range(canvas.get_width()) for y in range(canvas.get_height())}
+
+
+class FakeEngine:
+    """Lo mínimo que Scene necesita del motor."""
+
+    def __init__(self, screen):
+        self.screen = screen
 
 
 class TestText(unittest.TestCase):
     def setUp(self):
         pygame.init()
         self.addCleanup(pygame.quit)
-        interface = ServiceLocator.configs_service.get("assets/cfg/interface.json")
-        self.font = pygame.font.Font(interface["font"], interface["font_size"])
+        self.interface = ServiceLocator.configs_service.get("assets/cfg/interface.json")
+        self.font = pygame.font.Font(self.interface["font"], self.interface["font_size"])
         self.world = esper.World()
 
     def text_rect(self, entity):
@@ -64,7 +81,46 @@ class TestText(unittest.TestCase):
         before = self.world.component_for_entity(entity, CSurface).surf
         self.world.component_for_entity(entity, CText).color = RED
         system_text(self.world)
-        self.assertIsNot(self.world.component_for_entity(entity, CSurface).surf, before)
+        after = self.world.component_for_entity(entity, CSurface).surf
+        self.assertIsNot(after, before)
+        colors = drawn_colors(after)
+        self.assertIn(tuple(RED), colors)
+        self.assertNotIn(tuple(WHITE), colors)
+
+    def test_cambiar_la_fuente_lo_redibuja_con_el_nuevo_tamano(self):
+        entity = create_text(self.world, "AB", self.font, WHITE, pygame.Vector2(200, 8),
+                             TextAlignment.RIGHT)
+        big = pygame.font.Font(self.interface["font"], self.interface["font_size"] * 2)
+        self.world.component_for_entity(entity, CText).font = big
+        system_text(self.world)
+        rect = self.text_rect(entity)
+        self.assertEqual(rect.size, big.size("AB"))
+        self.assertEqual(rect.right, 200)
+
+    def test_cambiar_ancla_y_alineacion_mueve_el_texto(self):
+        entity = create_text(self.world, "HOLA", self.font, WHITE, pygame.Vector2(0, 0))
+        c_text = self.world.component_for_entity(entity, CText)
+        c_text.anchor = pygame.Vector2(128, 20)
+        c_text.alignment = TextAlignment.CENTER
+        system_text(self.world)
+        rect = self.text_rect(entity)
+        self.assertEqual(rect.top, 20)
+        self.assertAlmostEqual(rect.left + rect.width / 2, 128, delta=0.5)
+
+    def test_alineacion_desconocida_falla(self):
+        with self.assertRaises(ValueError):
+            aligned_position(pygame.Vector2(0, 0), 10, "CENTER")
+
+    def test_do_draw_de_la_escena_actualiza_los_textos(self):
+        screen = pygame.Surface((64, 16))
+        scene = Scene(FakeEngine(screen))
+        entity = create_text(scene.ecs_world, "0", self.font, WHITE, pygame.Vector2(64, 0),
+                             TextAlignment.RIGHT)
+        scene.ecs_world.component_for_entity(entity, CText).text = "123"
+        scene.do_draw(screen)
+        surf = scene.ecs_world.component_for_entity(entity, CSurface)
+        self.assertEqual(surf.area.size, self.font.size("123"))
+        self.assertIn(tuple(WHITE), drawn_colors(screen))
 
     def test_sin_cambios_no_se_redibuja(self):
         entity = create_text(self.world, "A", self.font, WHITE, pygame.Vector2(0, 0))
