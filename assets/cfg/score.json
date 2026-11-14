@@ -23,5 +23,23 @@
       "alignment": "CENTER",
       "color": { "r": 255, "g": 255, "b": 255 }
     }
+  },
+  "lives": {
+    "initial": 3,
+    "extra_life": { "first": 50000, "every": 100000 },
+    "hud": {
+      "max_visible": 4,
+      "icons": {
+        "anchor": { "x": 4, "y": 196 },
+        "size": { "w": 8, "h": 8 },
+        "spacing": 2,
+        "color": { "r": 80, "g": 160, "b": 255 }
+      },
+      "counter": {
+        "anchor": { "x": 46, "y": 196 },
+        "alignment": "LEFT",
+        "color": { "r": 255, "g": 255, "b": 255 }
+      }
+    }
   }
 }
