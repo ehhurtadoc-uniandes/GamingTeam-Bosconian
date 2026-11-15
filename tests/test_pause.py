@@ -68,6 +68,13 @@ class TestPauseVisibility(unittest.TestCase):
         for entity in (self.thing, self.star, self.hud, self.minimap):
             self.assertFalse(self.hidden(entity))
 
+    def test_reanudar_no_muestra_lo_que_ya_estaba_escondido(self):
+        self.world.add_component(self.thing, CTagHidden())
+        system_pause_visibility(self.world, paused=True)
+        system_pause_visibility(self.world, paused=False)
+        self.assertTrue(self.hidden(self.thing))
+        self.assertFalse(self.hidden(self.minimap))
+
     def test_lo_escondido_no_se_dibuja(self):
         screen = pygame.Surface((32, 32))
         self.world.add_component(self.thing, CTagHidden())
@@ -162,6 +169,14 @@ class TestPlayScenePause(unittest.TestCase):
         self.scene.simulate(DT)
         self.scene.simulate(DT)
         self.assertNotEqual(self.player_pos(), before)
+
+    def test_perder_el_foco_pausa_y_no_reanuda(self):
+        focus_lost = pygame.event.Event(pygame.WINDOWFOCUSLOST)
+        self.scene.process_events(focus_lost)
+        self.assertEqual(self.scene.state, PlayState.PAUSED)
+        self.scene.process_events(focus_lost)
+        self.assertEqual(self.scene.state, PlayState.PAUSED)
+        self.assertEqual(self.pause_texts(), ["JUEGO PAUSADO"])
 
     def test_flecha_presionada_en_pausa_cuenta_al_reanudar(self):
         self.press(pygame.K_p)
