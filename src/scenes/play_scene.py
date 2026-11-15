@@ -79,6 +79,7 @@ class PlayScene(Scene):
         self._held_direction_keys: set[tuple[str, int]] = set()
         self.state = PlayState.PLAYING
         self._pause_text: int | None = None
+        self._pause_info: dict = {}
 
     def do_create(self) -> None:
         constants = ServiceLocator.constants_service
@@ -201,6 +202,9 @@ class PlayScene(Scene):
         # Al perder el foco pygame puede no enviar el KEYUP; sin esto una flecha quedaría "pegada".
         if event.type == pygame.WINDOWFOCUSLOST:
             self._held_direction_keys.clear()
+            # Si el jugador se va a otra ventana, el juego no sigue sin él.
+            if self.state == PlayState.PLAYING:
+                self.toggle_pause()
 
     def _spawn_debug_enemy(self, enemy_type: EnemyType) -> int:
         enemies_info = ServiceLocator.configs_service.get(ServiceLocator.constants_service.enemies_config)
