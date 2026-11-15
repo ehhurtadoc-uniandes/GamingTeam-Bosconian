@@ -32,7 +32,8 @@ class TestDebugEnemies(unittest.TestCase):
         self.scene.start()
 
     def enemy_types(self):
-        return [c_tag.enemy_type for _, c_tag in self.scene.ecs_world.get_component(CEnemy)]
+        # esper guarda las entidades en un set: se ordenan por id, que es el orden de creación.
+        return [c_tag.enemy_type for _, c_tag in sorted(self.scene.ecs_world.get_component(CEnemy))]
 
     def test_teclas_1_2_3_crean_enemigos_i_p_e(self):
         for key in (pygame.K_1, pygame.K_2, pygame.K_3):
