@@ -14,19 +14,24 @@ def system_starfield(world: esper.World, delta_time: float, camera: CCamera, bli
 
     Parallax: cada estrella se mueve solo una fracción (parallax) de lo que se movió
     la cámara, así parece que está más lejos que el resto del mundo. Va después de
-    system_camera, que calcula camera.last_move.
+    system_camera, que calcula camera.last_move. El parpadeo es system_star_blink.
     """
     view = camera.viewport
-    components = world.get_components(CTransform, CSurface, CStar)
     c_t: CTransform
-    c_s: CSurface
     c_star: CStar
-    for _, (c_t, c_s, c_star) in components:
+    for _, (c_t, c_star) in world.get_components(CTransform, CStar):
         c_t.pos -= camera.last_move * c_star.parallax
         # Si sale del viewport, entra por el lado opuesto.
         c_t.pos.x = view.left + (c_t.pos.x - view.left) % view.width
         c_t.pos.y = view.top + (c_t.pos.y - view.top) % view.height
+    system_star_blink(world, delta_time, blink_info)
 
+
+def system_star_blink(world: esper.World, delta_time: float, blink_info: dict) -> None:
+    """Prende y apaga cada estrella al azar. Sola, deja las estrellas quietas pero brillando (pausa)."""
+    c_s: CSurface
+    c_star: CStar
+    for _, (c_s, c_star) in world.get_components(CSurface, CStar):
         c_star.time_left -= delta_time
         if c_star.time_left <= 0:
             c_star.visible = not c_star.visible

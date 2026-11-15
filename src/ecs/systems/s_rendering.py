@@ -4,6 +4,7 @@ import pygame
 from src.ecs.components.c_surface import CSurface
 from src.ecs.components.c_transform import CTransform
 from src.ecs.components.tags.c_tag_background import CTagBackground
+from src.ecs.components.tags.c_tag_hidden import CTagHidden
 from src.ecs.components.tags.c_tag_ui import CTagUI
 from src.ecs.systems.s_camera import get_camera, world_to_screen
 
@@ -13,7 +14,7 @@ def system_rendering(world: esper.World, screen: pygame.Surface) -> None:
 
     Si la escena tiene cámara, el mundo se dibuja relativo a ella, recortado a su
     viewport y sin dibujar lo que no se ve (culling). El fondo y la interfaz están
-    en coordenadas de pantalla y la cámara no los mueve.
+    en coordenadas de pantalla y la cámara no los mueve. Lo que tiene CTagHidden no se dibuja.
     """
     camera = get_camera(world)
     components = world.get_components(CTransform, CSurface)
@@ -23,6 +24,8 @@ def system_rendering(world: esper.World, screen: pygame.Surface) -> None:
     world_items = []
     ui = []
     for entity, (c_t, c_s) in components:
+        if world.has_component(entity, CTagHidden):
+            continue
         if world.has_component(entity, CTagUI):
             ui.append((c_t, c_s))
         elif world.has_component(entity, CTagBackground):
