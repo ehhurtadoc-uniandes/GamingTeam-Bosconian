@@ -1,0 +1,54 @@
+{
+  "title": {
+    "text": "INSTRUCCIONES",
+    "anchor": {
+      "x": 128,
+      "y": 16
+    },
+    "alignment": "CENTER",
+    "color": {
+      "r": 255,
+      "g": 60,
+      "b": 60
+    }
+  },
+  "lines": {
+    "anchor": {
+      "x": 16,
+      "y": 40
+    },
+    "line_height": 12,
+    "alignment": "LEFT",
+    "color": {
+      "r": 255,
+      "g": 255,
+      "b": 255
+    },
+    "text": [
+      "FLECHAS: MOVER LA NAVE",
+      "Z: DISPARAR",
+      "X: HABILIDAD ESPECIAL",
+      "P / ESC: PAUSA",
+      "",
+      "DESTRUYE TODAS LAS BASES",
+      "PARA PASAR DE RONDA.",
+      "",
+      "UNA BASE CAE CON SUS 6",
+      "TORRETAS O UN DISPARO",
+      "AL NUCLEO."
+    ]
+  },
+  "hint": {
+    "text": "Z / ESC: VOLVER",
+    "anchor": {
+      "x": 128,
+      "y": 188
+    },
+    "alignment": "CENTER",
+    "color": {
+      "r": 120,
+      "g": 120,
+      "b": 120
+    }
+  }
+}

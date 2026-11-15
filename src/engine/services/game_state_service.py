@@ -4,13 +4,16 @@ def next_extra_life_after(threshold: int, every: int) -> int:
 
 
 class GameStateService:
-    """Datos de la partida que sobreviven al cambio de escena y de nivel (puntaje, HI-SCORE, vidas).
+    """Datos de la partida que sobreviven al cambio de escena y de nivel (puntaje, HI-SCORE, vidas, nivel).
 
     Cada escena vacía su mundo ECS al salir, así que estos datos no pueden vivir en una entidad.
     Los JSON no se guardan aquí: ConfigsService ya los lee una sola vez y los conserva.
 
     lives son las vidas de reserva: con 0 el jugador sigue jugando su última nave (LC-VID-01,
     "cero vidas se considera una vida"), y la partida termina si muere así.
+
+    level_index es el nivel que se juega (índice en levels.json): lo elige la escena de título
+    y lo avanza el paso de nivel (#26). new_game no lo cambia, así continuar (#37) sigue en el mismo nivel.
     """
 
     def __init__(self) -> None:
@@ -18,6 +21,7 @@ class GameStateService:
         self.score = 0
         self.lives = 0
         self.next_extra_life = 0
+        self.level_index = 0
         self._lives_info: dict = {}
 
     def load(self, score_info: dict) -> None:
