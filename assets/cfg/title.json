@@ -1,0 +1,77 @@
+{
+  "title": {
+    "text": "PROYECTO FINAL",
+    "anchor": {
+      "x": 128,
+      "y": 40
+    },
+    "alignment": "CENTER",
+    "color": {
+      "r": 255,
+      "g": 60,
+      "b": 60
+    }
+  },
+  "subtitle": {
+    "text": "MISW4407",
+    "anchor": {
+      "x": 128,
+      "y": 54
+    },
+    "alignment": "CENTER",
+    "color": {
+      "r": 255,
+      "g": 255,
+      "b": 255
+    }
+  },
+  "menu": {
+    "anchor": {
+      "x": 128,
+      "y": 96
+    },
+    "line_height": 16,
+    "alignment": "CENTER",
+    "color": {
+      "r": 255,
+      "g": 255,
+      "b": 255
+    },
+    "selected_color": {
+      "r": 255,
+      "g": 230,
+      "b": 80
+    },
+    "options": [
+      {
+        "text": "JUGAR",
+        "action": "PLAY"
+      },
+      {
+        "text": "< RONDA {level} >",
+        "action": "LEVEL"
+      },
+      {
+        "text": "INSTRUCCIONES",
+        "action": "INSTRUCTIONS"
+      },
+      {
+        "text": "CREDITOS",
+        "action": "CREDITS"
+      }
+    ]
+  },
+  "hint": {
+    "text": "FLECHAS: ELEGIR   Z: ACEPTAR",
+    "anchor": {
+      "x": 128,
+      "y": 188
+    },
+    "alignment": "CENTER",
+    "color": {
+      "r": 120,
+      "g": 120,
+      "b": 120
+    }
+  }
+}

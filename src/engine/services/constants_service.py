@@ -21,6 +21,9 @@ class ConstantsService:
         self.world_config = "assets/cfg/world.json"
         self.stars_config = "assets/cfg/stars.json"
         self.spawner_config = "assets/cfg/spawner.json"
+        self.title_config = "assets/cfg/title.json"
+        self.instructions_config = "assets/cfg/instructions.json"
+        self.credits_config = "assets/cfg/credits.json"
         self.pause_config = "assets/cfg/pause.json"
 
         # Delta máximo de un frame, en segundos: dos frames a 60 FPS. Ver GameEngine._calculate_time.
@@ -43,6 +46,11 @@ class ConstantsService:
             "PLAYER_LEFT": pygame.Vector2(-1, 0),
             "PLAYER_RIGHT": pygame.Vector2(1, 0),
         }
+        # Comandos de los menús (#33): mover la selección, cambiar un valor, aceptar y volver.
+        self.menu_move_commands = {"MENU_UP": -1, "MENU_DOWN": 1}
+        self.menu_change_commands = {"MENU_LEFT": -1, "MENU_RIGHT": 1}
+        self.menu_accept_command = "MENU_ACCEPT"
+        self.menu_back_command = "MENU_BACK"
         # Comando que pausa y reanuda la escena de juego (#35).
         self.pause_command = "PAUSE"
         # Con el modo de depuración, estas teclas crean enemigos (valor de EnemyType) a pedido,

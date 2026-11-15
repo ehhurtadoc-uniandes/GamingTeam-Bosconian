@@ -2,6 +2,7 @@
 import random
 
 import esper
+import pygame
 
 from src.ecs.components.c_camera import CCamera
 from src.ecs.components.c_star import CStar
@@ -23,6 +24,21 @@ def system_starfield(world: esper.World, delta_time: float, camera: CCamera, bli
         c_t.pos -= camera.last_move * c_star.parallax
         # Si sale del viewport, entra por el lado opuesto.
         c_t.pos.x = view.left + (c_t.pos.x - view.left) % view.width
+        c_t.pos.y = view.top + (c_t.pos.y - view.top) % view.height
+    system_star_blink(world, delta_time, blink_info)
+
+
+def system_starfield_fall(world: esper.World, delta_time: float, fall_speed: float,
+                          view: pygame.Rect, blink_info: dict) -> None:
+    """Estrellas de los menús: bajan y parpadean (LC-EST-04).
+
+    Cada estrella baja a fall_speed * parallax px/s, así las capas lejanas bajan más lento.
+    Al salir por abajo vuelven a entrar por arriba.
+    """
+    c_t: CTransform
+    c_star: CStar
+    for _, (c_t, c_star) in world.get_components(CTransform, CStar):
+        c_t.pos.y += fall_speed * c_star.parallax * delta_time
         c_t.pos.y = view.top + (c_t.pos.y - view.top) % view.height
     system_star_blink(world, delta_time, blink_info)
 

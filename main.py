@@ -8,7 +8,7 @@ from src.engine.game_engine import GameEngine
 
 async def main() -> None:
     engine = GameEngine()
-    await engine.run("play")
+    await engine.run("title")
 
 
 if __name__ == "__main__":

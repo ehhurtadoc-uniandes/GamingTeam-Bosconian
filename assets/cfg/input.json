@@ -6,6 +6,12 @@
   "PLAYER_FIRE": ["z"],
   "PLAYER_SPECIAL": ["x"],
   "PAUSE": ["p", "escape"],
+  "MENU_UP": ["up"],
+  "MENU_DOWN": ["down"],
+  "MENU_LEFT": ["left"],
+  "MENU_RIGHT": ["right"],
+  "MENU_ACCEPT": ["z", "return", "space"],
+  "MENU_BACK": ["escape", "x"],
   "DEBUG_SPAWN_I": ["1", "[1]"],
   "DEBUG_SPAWN_P": ["2", "[2]"],
   "DEBUG_SPAWN_E": ["3", "[3]"]

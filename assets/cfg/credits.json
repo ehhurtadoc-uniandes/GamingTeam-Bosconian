@@ -1,0 +1,51 @@
+{
+  "title": {
+    "text": "CREDITOS",
+    "anchor": {
+      "x": 128,
+      "y": 16
+    },
+    "alignment": "CENTER",
+    "color": {
+      "r": 255,
+      "g": 60,
+      "b": 60
+    }
+  },
+  "lines": {
+    "anchor": {
+      "x": 128,
+      "y": 44
+    },
+    "line_height": 12,
+    "alignment": "CENTER",
+    "color": {
+      "r": 255,
+      "g": 255,
+      "b": 255
+    },
+    "text": [
+      "EDWIN HURTADO",
+      "VALERIA MARTINEZ",
+      "MARIA CATALINA VILLACRIS",
+      "ESTEBAN LEAL",
+      "",
+      "MISW4407",
+      "UNIVERSIDAD DE LOS ANDES",
+      "2026"
+    ]
+  },
+  "hint": {
+    "text": "Z / ESC: VOLVER",
+    "anchor": {
+      "x": 128,
+      "y": 188
+    },
+    "alignment": "CENTER",
+    "color": {
+      "r": 120,
+      "g": 120,
+      "b": 120
+    }
+  }
+}

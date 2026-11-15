@@ -7,9 +7,10 @@ from src.create.prefab_base import create_bases
 from src.create.prefab_camera import create_camera
 from src.create.prefab_enemy import create_enemy
 from src.create.prefab_enemy_spawner import create_enemy_spawner
-from src.create.prefab_hud import create_hud_text, create_lives_hud, create_score_hud
+from src.create.prefab_hud import create_lives_hud, create_score_hud
 from src.create.prefab_player import create_player
 from src.create.prefab_stars import create_starfield
+from src.create.prefab_text import create_interface_text
 from src.ecs.components.c_input_command import CInputCommand, CommandPhase
 from src.ecs.components.c_surface import CSurface
 from src.ecs.components.c_transform import CTransform
@@ -73,7 +74,7 @@ class PlayScene(Scene):
 
     def __init__(self, game_engine) -> None:
         super().__init__(game_engine)
-        # Índice en levels.json del nivel que se juega. Pasar de nivel (#26) lo avanzará.
+        # Índice en levels.json del nivel que se juega; se toma de GameStateService al crear la escena.
         self.level_index = 0
         # Se guardan teclas y no acciones: si una dirección tiene varias teclas, soltar una no la apaga.
         self._held_direction_keys: set[tuple[str, int]] = set()
@@ -84,6 +85,7 @@ class PlayScene(Scene):
     def do_create(self) -> None:
         constants = ServiceLocator.constants_service
         self._held_direction_keys.clear()
+        self.level_index = ServiceLocator.game_state_service.level_index
         self.state = PlayState.PLAYING
         self._pause_text = None
         self._pause_info = ServiceLocator.configs_service.get(constants.pause_config)
@@ -191,7 +193,7 @@ class PlayScene(Scene):
             self.state = PlayState.PAUSED
             system_pause_visibility(self.ecs_world, paused=True)
             text_info = self._pause_info["text"]
-            self._pause_text = create_hud_text(self.ecs_world, text_info["text"], text_info)
+            self._pause_text = create_interface_text(self.ecs_world, text_info["text"], text_info)
         else:
             self.state = PlayState.PLAYING
             system_pause_visibility(self.ecs_world, paused=False)

@@ -6,6 +6,8 @@ import pygame
 from src.engine.scenes.scene import Scene
 from src.engine.service_locator import ServiceLocator
 from src.scenes.play_scene import PlayScene
+from src.scenes.text_scene import TextScene
+from src.scenes.title_scene import TitleScene
 
 
 class GameEngine:
@@ -29,6 +31,9 @@ class GameEngine:
         ServiceLocator.game_state_service.load(ServiceLocator.configs_service.get(constants.score_config))
 
         self._scenes: dict[str, Scene] = {
+            "title": TitleScene(self),
+            "instructions": TextScene(self, constants.instructions_config),
+            "credits": TextScene(self, constants.credits_config),
             "play": PlayScene(self),
         }
         self._current_scene: Scene | None = None
