@@ -21,6 +21,7 @@ class ConstantsService:
         self.world_config = "assets/cfg/world.json"
         self.stars_config = "assets/cfg/stars.json"
         self.spawner_config = "assets/cfg/spawner.json"
+        self.pause_config = "assets/cfg/pause.json"
 
         # Delta máximo de un frame, en segundos: dos frames a 60 FPS. Ver GameEngine._calculate_time.
         # Con más, una bala y un enemigo que van de frente (~100 px/s cada uno) podrían cruzarse
@@ -42,6 +43,8 @@ class ConstantsService:
             "PLAYER_LEFT": pygame.Vector2(-1, 0),
             "PLAYER_RIGHT": pygame.Vector2(1, 0),
         }
+        # Comando que pausa y reanuda la escena de juego (#35).
+        self.pause_command = "PAUSE"
         # Con el modo de depuración, estas teclas crean enemigos (valor de EnemyType) a pedido,
         # además de los del spawner (#28).
         self.debug_spawn_commands = {

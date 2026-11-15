@@ -13,7 +13,8 @@ from src.ecs.components.tags.c_tag_ui import CTagUI
 from src.engine.service_locator import ServiceLocator
 
 
-def _create_hud_text(world: esper.World, text: str, text_info: dict) -> int:
+def create_hud_text(world: esper.World, text: str, text_info: dict) -> int:
+    """Texto de interfaz con la fuente de interface.json; text_info trae anchor, alignment y color."""
     interface = ServiceLocator.configs_service.get(ServiceLocator.constants_service.interface_config)
     font = ServiceLocator.fonts_service.get(interface["font"], interface["font_size"])
     color = text_info["color"]
@@ -24,11 +25,11 @@ def _create_hud_text(world: esper.World, text: str, text_info: dict) -> int:
 
 def create_score_hud(world: esper.World, hud_info: dict) -> None:
     """Crea los textos 1UP y HI-SCORE con sus valores, según el "hud" de score.json."""
-    _create_hud_text(world, hud_info["score_label"]["text"], hud_info["score_label"])
-    _create_hud_text(world, hud_info["hi_score_label"]["text"], hud_info["hi_score_label"])
-    score = _create_hud_text(world, "0", hud_info["score_value"])
+    create_hud_text(world, hud_info["score_label"]["text"], hud_info["score_label"])
+    create_hud_text(world, hud_info["hi_score_label"]["text"], hud_info["hi_score_label"])
+    score = create_hud_text(world, "0", hud_info["score_value"])
     world.add_component(score, CScoreText(ScoreKind.SCORE))
-    hi_score = _create_hud_text(world, "0", hud_info["hi_score_value"])
+    hi_score = create_hud_text(world, "0", hud_info["hi_score_value"])
     world.add_component(hi_score, CScoreText(ScoreKind.HI_SCORE))
 
 
@@ -43,5 +44,5 @@ def create_lives_hud(world: esper.World, lives_hud_info: dict) -> None:
     empty = pygame.Surface((0, 0), pygame.SRCALPHA)
     world.create_entity(CTransform(pygame.Vector2(anchor["x"], anchor["y"])), CSurface.from_surface(empty),
                         CLivesIcons(icons_info, max_visible), CTagUI())
-    counter = _create_hud_text(world, "", lives_hud_info["counter"])
+    counter = create_hud_text(world, "", lives_hud_info["counter"])
     world.add_component(counter, CLivesCounter(max_visible))

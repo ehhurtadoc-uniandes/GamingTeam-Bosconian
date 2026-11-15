@@ -1,4 +1,5 @@
 import random
+from enum import Enum
 
 import pygame
 
@@ -6,7 +7,7 @@ from src.create.prefab_base import create_bases
 from src.create.prefab_camera import create_camera
 from src.create.prefab_enemy import create_enemy
 from src.create.prefab_enemy_spawner import create_enemy_spawner
-from src.create.prefab_hud import create_lives_hud, create_score_hud
+from src.create.prefab_hud import create_hud_text, create_lives_hud, create_score_hud
 from src.create.prefab_player import create_player
 from src.create.prefab_stars import create_starfield
 from src.ecs.components.c_input_command import CInputCommand, CommandPhase
@@ -22,9 +23,10 @@ from src.ecs.systems.s_lifetime import system_lifetime
 from src.ecs.systems.s_lives_hud import system_lives_hud
 from src.ecs.systems.s_movement import system_movement
 from src.ecs.systems.s_offscreen_despawn import system_offscreen_despawn
+from src.ecs.systems.s_pause import system_pause_visibility
 from src.ecs.systems.s_player_movement import system_player_acceleration, system_player_direction
 from src.ecs.systems.s_score import system_score_hud
-from src.ecs.systems.s_starfield import system_starfield
+from src.ecs.systems.s_starfield import system_star_blink, system_starfield
 from src.ecs.systems.s_steering import system_steering
 from src.ecs.systems.s_turret import system_turret
 from src.ecs.systems.s_wraparound import system_wraparound
@@ -56,6 +58,12 @@ def random_edge_position(screen_rect: pygame.Rect, size: pygame.Vector2) -> pyga
     return pygame.Vector2(max_x, random.uniform(0, max_y))
 
 
+class PlayState(Enum):
+    """Estado de la escena de juego (patrón State). PAUSED congela todo menos el parpadeo de las estrellas."""
+    PLAYING = 0
+    PAUSED = 1
+
+
 class PlayScene(Scene):
     """Escena de juego. Crea al jugador; cada área agrega aquí sus entidades y sistemas.
 
@@ -69,10 +77,15 @@ class PlayScene(Scene):
         self.level_index = 0
         # Se guardan teclas y no acciones: si una dirección tiene varias teclas, soltar una no la apaga.
         self._held_direction_keys: set[tuple[str, int]] = set()
+        self.state = PlayState.PLAYING
+        self._pause_text: int | None = None
 
     def do_create(self) -> None:
         constants = ServiceLocator.constants_service
         self._held_direction_keys.clear()
+        self.state = PlayState.PLAYING
+        self._pause_text = None
+        self._pause_info = ServiceLocator.configs_service.get(constants.pause_config)
         # Las estrellas se crean primero; igual system_rendering las dibuja siempre debajo (CTagBackground).
         world_info = ServiceLocator.configs_service.get(constants.world_config)
         self.world_size = world_size_from_config(world_info)
@@ -106,6 +119,10 @@ class PlayScene(Scene):
             raise ValueError(f"{level_path}: {error}") from error
 
     def do_update(self, delta_time: float) -> None:
+        if self.state == PlayState.PAUSED:
+            # En pausa nada se mueve; las estrellas siguen brillando quietas (LC-ESC-04.3.2).
+            system_star_blink(self.ecs_world, delta_time, self._stars_info["blink"])
+            return
         system_player_acceleration(self.ecs_world, delta_time)
         # Los enemigos persiguen la posición del jugador. El estado va antes que el
         # steering porque ajusta sus pesos. Con world_size persiguen cruzando los bordes.
@@ -135,7 +152,8 @@ class PlayScene(Scene):
 
     def do_draw(self, screen: pygame.Surface) -> None:
         super().do_draw(screen)
-        if not self._debug_info["enabled"]:
+        # En pausa los enemigos no se ven, así que tampoco sus etiquetas.
+        if not self._debug_info["enabled"] or self.state == PlayState.PAUSED:
             return
         font = ServiceLocator.fonts_service.get(self._debug_info["font"], self._debug_info["font_size"])
         c = self._debug_info["label_color"]
@@ -147,10 +165,11 @@ class PlayScene(Scene):
 
     def do_action(self, action: CInputCommand) -> None:
         constants = ServiceLocator.constants_service
-        if action.name in constants.debug_spawn_commands:
-            if action.phase == CommandPhase.START and self._debug_info["enabled"]:
-                self._spawn_debug_enemy(EnemyType(constants.debug_spawn_commands[action.name]))
+        if action.name == constants.pause_command:
+            if action.phase == CommandPhase.START:
+                self.toggle_pause()
         elif action.name in constants.direction_commands:
+            # También en pausa: así, al reanudar, la dirección es la de las flechas que siguen presionadas.
             held = (action.name, action.key)
             if action.phase == CommandPhase.START:
                 self._held_direction_keys.add(held)
@@ -158,6 +177,25 @@ class PlayScene(Scene):
                 self._held_direction_keys.discard(held)
             active = {name for name, _ in self._held_direction_keys}
             system_player_direction(self.ecs_world, direction_from_commands(active))
+        elif self.state == PlayState.PAUSED:
+            # En pausa se ignora todo lo demás (disparo, depuración).
+            return
+        elif action.name in constants.debug_spawn_commands:
+            if action.phase == CommandPhase.START and self._debug_info["enabled"]:
+                self._spawn_debug_enemy(EnemyType(constants.debug_spawn_commands[action.name]))
+
+    def toggle_pause(self) -> None:
+        """Pausa o reanuda (LC-ESC-04.3): esconde el mundo y el minimapa y muestra "JUEGO PAUSADO"."""
+        if self.state == PlayState.PLAYING:
+            self.state = PlayState.PAUSED
+            system_pause_visibility(self.ecs_world, paused=True)
+            text_info = self._pause_info["text"]
+            self._pause_text = create_hud_text(self.ecs_world, text_info["text"], text_info)
+        else:
+            self.state = PlayState.PLAYING
+            system_pause_visibility(self.ecs_world, paused=False)
+            self.ecs_world.delete_entity(self._pause_text, immediate=True)
+            self._pause_text = None
 
     def do_process_events(self, event: pygame.event.Event) -> None:
         # Al perder el foco pygame puede no enviar el KEYUP; sin esto una flecha quedaría "pegada".
