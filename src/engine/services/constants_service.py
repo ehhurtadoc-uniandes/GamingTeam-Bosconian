@@ -20,6 +20,7 @@ class ConstantsService:
         self.levels_config = "assets/cfg/levels.json"
         self.world_config = "assets/cfg/world.json"
         self.stars_config = "assets/cfg/stars.json"
+        self.spawner_config = "assets/cfg/spawner.json"
 
         # Delta máximo de un frame, en segundos: dos frames a 60 FPS. Ver GameEngine._calculate_time.
         # Con más, una bala y un enemigo que van de frente (~100 px/s cada uno) podrían cruzarse
@@ -41,7 +42,8 @@ class ConstantsService:
             "PLAYER_LEFT": pygame.Vector2(-1, 0),
             "PLAYER_RIGHT": pygame.Vector2(1, 0),
         }
-        # Mientras no exista el spawner (#28), estas teclas crean enemigos (valor de EnemyType) para probarlos.
+        # Con el modo de depuración, estas teclas crean enemigos (valor de EnemyType) a pedido,
+        # además de los del spawner (#28).
         self.debug_spawn_commands = {
             "DEBUG_SPAWN_I": "I",
             "DEBUG_SPAWN_P": "P",

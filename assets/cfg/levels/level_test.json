@@ -2,5 +2,12 @@
   "bases": [
     { "pos": { "x": 56, "y": 48 }, "orientation": "horizontal" },
     { "pos": { "x": 204, "y": 150 }, "orientation": "vertical" }
-  ]
+  ],
+  "spawner": {
+    "initial_delay": 3.0,
+    "interval": 2.5,
+    "max_alive": 6,
+    "weights": { "I": 3, "P": 2, "E": 1 },
+    "wander_scale": 1.0
+  }
 }
