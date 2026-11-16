@@ -1,0 +1,26 @@
+{
+  "rock": {
+    "images": ["assets/img/rock_1.png", "assets/img/rock_2.png", "assets/img/rock_3.png"],
+    "destructible": true,
+    "points": 10,
+    "hitbox_margin": 2
+  },
+  "solid_rock": {
+    "images": ["assets/img/solid_rock_1.png", "assets/img/solid_rock_2.png", "assets/img/solid_rock_3.png"],
+    "destructible": false,
+    "points": 0,
+    "hitbox_margin": 1
+  },
+  "mine": {
+    "images": ["assets/img/mine.png"],
+    "animation": { "number_frames": 2, "framerate": 4 },
+    "destructible": true,
+    "points": 20,
+    "hitbox_margin": 3,
+    "blast": {
+      "image": "assets/img/mine_blast.png",
+      "animation": { "number_frames": 6, "framerate": 12 },
+      "radius": 24
+    }
+  }
+}
