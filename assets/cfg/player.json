@@ -1,5 +1,6 @@
 {
-  "size": { "w": 16, "h": 16 },
+  "image": "assets/img/player.png",
+  "size": { "w": 24, "h": 24 },
   "color": { "r": 80, "g": 160, "b": 255 },
   "hitbox": { "size": { "w": 12, "h": 12 } },
   "respawn": { "delay": 2.0, "invulnerable_time": 2.0, "blink_interval": 0.1 },
