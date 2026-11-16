@@ -6,5 +6,13 @@
     "max_speed": 60,
     "acceleration": 15,
     "start_direction": { "x": 0, "y": -1 }
+  },
+  "weapon": {
+    "fire_cooldown": 0.25,
+    "bullet": {
+      "size": { "w": 3, "h": 3 },
+      "color": { "r": 255, "g": 255, "b": 255 },
+      "speed": 150
+    }
   }
 }

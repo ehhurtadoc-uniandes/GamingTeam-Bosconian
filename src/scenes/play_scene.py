@@ -25,6 +25,7 @@ from src.ecs.systems.s_lives_hud import system_lives_hud
 from src.ecs.systems.s_movement import system_movement
 from src.ecs.systems.s_offscreen_despawn import system_offscreen_despawn
 from src.ecs.systems.s_pause import system_pause_visibility
+from src.ecs.systems.s_player_fire import system_player_fire, system_player_weapon_cooldown
 from src.ecs.systems.s_player_movement import system_player_acceleration, system_player_direction
 from src.ecs.systems.s_score import system_score_hud
 from src.ecs.systems.s_starfield import system_star_blink, system_starfield
@@ -127,6 +128,7 @@ class PlayScene(Scene):
             system_star_blink(self.ecs_world, delta_time, self._stars_info["blink"])
             return
         system_player_acceleration(self.ecs_world, delta_time)
+        system_player_weapon_cooldown(self.ecs_world, delta_time)
         # Los enemigos persiguen la posición del jugador. El estado va antes que el
         # steering porque ajusta sus pesos. Con world_size persiguen cruzando los bordes.
         player_pos = self.ecs_world.component_for_entity(self._player_entity, CTransform).pos
@@ -183,6 +185,9 @@ class PlayScene(Scene):
         elif self.state == PlayState.PAUSED:
             # En pausa se ignora todo lo demás (disparo, depuración).
             return
+        elif action.name == constants.fire_command:
+            if action.phase == CommandPhase.START:
+                system_player_fire(self.ecs_world)
         elif action.name in constants.debug_spawn_commands:
             if action.phase == CommandPhase.START and self._debug_info["enabled"]:
                 self._spawn_debug_enemy(EnemyType(constants.debug_spawn_commands[action.name]))
