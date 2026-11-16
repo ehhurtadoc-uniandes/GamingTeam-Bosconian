@@ -9,6 +9,8 @@ from src.utils.wrap import wrapped_delta
 
 ENEMY_ENEMY_PAIR = (CollisionLayer.ENEMY, CollisionLayer.ENEMY)
 ENEMY_BASE_PAIR = (CollisionLayer.ENEMY, CollisionLayer.BASE)
+# Pasadas de detección y separación por paso; suficiente para grupos chicos sin costo excesivo.
+MAX_PASSES = 4
 
 
 def contact_normal(center_a: pygame.Vector2, size_a: pygame.Vector2, center_b: pygame.Vector2,
@@ -53,9 +55,20 @@ def _bounce(world: esper.World, first: int, second: int, second_is_movable: bool
         c_t_a.pos -= normal * overlap
 
 
-def system_enemy_bounce(world: esper.World, world_size: pygame.Vector2 | None = None) -> None:
-    collisions = system_collision(world, [ENEMY_ENEMY_PAIR, ENEMY_BASE_PAIR], world_size)
-    for enemy_a, enemy_b in collisions[ENEMY_ENEMY_PAIR]:
-        _bounce(world, enemy_a, enemy_b, True, world_size)
-    for enemy, base in collisions[ENEMY_BASE_PAIR]:
-        _bounce(world, enemy, base, False, world_size)
+def system_enemy_bounce(world: esper.World, world_size: pygame.Vector2 | None = None,
+                        max_passes: int = MAX_PASSES) -> None:
+    """Los enemigos rebotan entre sí y contra el cuerpo de las bases (LC-COL-03).
+
+    Separar una pareja puede meter a un enemigo en otro o en una base que no estaban
+    en la lista de choques. Por eso se vuelve a detectar y resolver hasta que no
+    quede ningún solape, con un máximo de max_passes pasadas por paso.
+    """
+    for _ in range(max_passes):
+        collisions = system_collision(world, [ENEMY_ENEMY_PAIR, ENEMY_BASE_PAIR], world_size)
+        if not collisions[ENEMY_ENEMY_PAIR] and not collisions[ENEMY_BASE_PAIR]:
+            return
+        for enemy_a, enemy_b in collisions[ENEMY_ENEMY_PAIR]:
+            _bounce(world, enemy_a, enemy_b, True, world_size)
+        # Las bases van al final: como no se mueven, su corrección es la que queda.
+        for enemy, base in collisions[ENEMY_BASE_PAIR]:
+            _bounce(world, enemy, base, False, world_size)

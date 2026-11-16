@@ -218,6 +218,22 @@ class TestReboteContraBases(unittest.TestCase):
         self.assertEqual(vel(world, enemy), V(-50, 0))
         self.assertFalse(overlapping(world, enemy, base, world_size))
 
+    def test_el_empujon_de_otro_enemigo_no_lo_deja_dentro_de_la_base(self):
+        # El cuerpo de la base empieza en x=70. b no la toca, pero al separarse de a
+        # queda solapándola: la segunda pasada lo saca en el mismo paso.
+        make_enemy(self.world, (55, 95), (50, 0))
+        b = make_enemy(self.world, (61.5, 95))
+        self.assertFalse(overlapping(self.world, b, self.base))
+        system_enemy_bounce(self.world)
+        self.assertFalse(overlapping(self.world, b, self.base))
+
+    def test_con_una_sola_pasada_el_empujon_lo_deja_dentro(self):
+        # Documenta por qué hacen falta varias pasadas.
+        make_enemy(self.world, (55, 95), (50, 0))
+        b = make_enemy(self.world, (61.5, 95))
+        system_enemy_bounce(self.world, max_passes=1)
+        self.assertTrue(overlapping(self.world, b, self.base))
+
     def test_torretas_y_nucleo_no_se_mueven(self):
         c_base = self.world.component_for_entity(self.base, CBase)
         before = [V(pos(self.world, e)) for e in (*c_base.turrets, c_base.core)]
