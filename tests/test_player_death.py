@@ -1,5 +1,7 @@
 import os
+import random
 import unittest
+from unittest import mock
 import warnings
 
 os.environ["SDL_VIDEODRIVER"] = "dummy"
@@ -11,14 +13,15 @@ import pygame
 from src.create.prefab_bullet import create_turret_bullet
 from src.create.prefab_enemy import create_enemy
 from src.create.prefab_explosion import create_explosion_for
-from src.create.prefab_obstacle import create_mine_blast
+from src.create.prefab_obstacle import create_mine_blast, create_obstacle
 from src.create.prefab_player import create_player
 from src.create.prefab_player_bullet import create_player_bullet
 from src.ecs.components.c_animation import CAnimation
-from src.ecs.components.c_enemy import EnemyType
+from src.ecs.components.c_enemy import CEnemy, EnemyType
+from src.ecs.components.c_enemy_spawner import CEnemySpawner
 from src.ecs.components.c_explosion_burst import CExplosionBurst
-from src.ecs.components.c_hitbox import CollisionLayer
-from src.ecs.components.c_obstacle import CObstacle
+from src.ecs.components.c_mine_blast import CMineBlast
+from src.ecs.components.c_obstacle import CObstacle, ObstacleKind
 from src.ecs.components.c_player_dead import CPlayerDead
 from src.ecs.components.c_player_invulnerable import CPlayerInvulnerable
 from src.ecs.components.c_player_movement import CPlayerMovement
@@ -29,18 +32,22 @@ from src.ecs.components.c_velocity import CVelocity
 from src.ecs.components.tags.c_tag_hidden import CTagHidden
 from src.ecs.systems.s_player_death import (is_vulnerable, kill_player, system_player_death,
                                             system_player_invulnerability, system_player_respawn)
+from src.ecs.systems.s_camera import get_camera
 from src.ecs.systems.s_player_fire import system_player_fire
 from src.ecs.systems.s_player_movement import system_player_acceleration
 from src.engine.game_engine import GameEngine
 from src.engine.service_locator import ServiceLocator
 from src.scenes.text_scene import TextScene
-from tests.test_collision import add_box
+from src.utils.wrap import wrapped_delta
 from tests.test_input import key_event
+from tests.test_obstacles import OBSTACLES
 from tests.test_player_fire import PLAYER_INFO
 from tests.test_turret import BULLET_INFO, ENEMIES_INFO
 
 V = pygame.Vector2
 RESPAWN = {"delay": 1.0, "invulnerable_time": 1.0, "blink_interval": 0.1}
+# Inicio del nivel, lejos de donde muere el jugador en las pruebas (100, 100).
+SPAWN = V(40, 40)
 
 
 def reset_game_state():
@@ -54,6 +61,10 @@ def explosions(world):
 
 class TestMuerteDelJugador(unittest.TestCase):
     def setUp(self):
+        # Las imágenes de los obstáculos necesitan una ventana.
+        pygame.init()
+        pygame.display.set_mode((1, 1))
+        self.addCleanup(pygame.quit)
         reset_game_state()
         self.world = esper.World()
         self.player = create_player(self.world, PLAYER_INFO, V(100, 100))
@@ -63,63 +74,93 @@ class TestMuerteDelJugador(unittest.TestCase):
 
     def test_choque_con_enemigo_mata_al_jugador_y_al_enemigo(self):
         enemy = self.hit_with_enemy()
-        system_player_death(self.world, RESPAWN)
+        system_player_death(self.world, RESPAWN, OBSTACLES)
         self.assertTrue(self.world.has_component(self.player, CPlayerDead))
         self.assertFalse(self.world.entity_exists(enemy))
 
     def test_choque_con_bala_enemiga_mata_al_jugador_y_a_la_bala(self):
         bullet = create_turret_bullet(self.world, BULLET_INFO, V(106, 106), V(1, 0))
-        system_player_death(self.world, RESPAWN)
+        system_player_death(self.world, RESPAWN, OBSTACLES)
         self.assertTrue(self.world.has_component(self.player, CPlayerDead))
         self.assertFalse(self.world.entity_exists(bullet))
 
-    def test_choque_con_obstaculo_mata_al_jugador_pero_no_al_obstaculo(self):
-        obstacle = add_box(self.world, (100, 100), (10, 10), CollisionLayer.OBSTACLE)
-        system_player_death(self.world, RESPAWN)
+    def hit_with_obstacle(self, kind):
+        return create_obstacle(self.world, OBSTACLES, kind, V(108, 108), random.Random(0))
+
+    def test_choque_con_roca_mata_al_jugador_y_rompe_la_roca(self):
+        rock = self.hit_with_obstacle(ObstacleKind.ROCK)
+        system_player_death(self.world, RESPAWN, OBSTACLES)
         self.assertTrue(self.world.has_component(self.player, CPlayerDead))
-        self.assertTrue(self.world.entity_exists(obstacle))
+        self.assertFalse(self.world.entity_exists(rock))
+
+    def test_choque_con_mina_mata_al_jugador_y_la_mina_explota(self):
+        mine = self.hit_with_obstacle(ObstacleKind.MINE)
+        system_player_death(self.world, RESPAWN, OBSTACLES)
+        self.assertTrue(self.world.has_component(self.player, CPlayerDead))
+        self.assertFalse(self.world.entity_exists(mine))
+        self.assertEqual(len(self.world.get_component(CMineBlast)), 1)
+
+    def test_choque_con_roca_indestructible_mata_al_jugador_y_la_roca_sigue(self):
+        rock = self.hit_with_obstacle(ObstacleKind.SOLID_ROCK)
+        system_player_death(self.world, RESPAWN, OBSTACLES)
+        self.assertTrue(self.world.has_component(self.player, CPlayerDead))
+        self.assertTrue(self.world.entity_exists(rock))
+
+    def test_chocar_con_un_obstaculo_no_da_puntos(self):
+        self.hit_with_obstacle(ObstacleKind.MINE)
+        system_player_death(self.world, RESPAWN, OBSTACLES)
+        self.assertEqual(ServiceLocator.game_state_service.score, 0)
+
+    def test_la_misma_mina_no_lo_mata_dos_veces(self):
+        self.hit_with_obstacle(ObstacleKind.MINE)
+        system_player_death(self.world, RESPAWN, OBSTACLES)
+        system_player_respawn(self.world, 1.01, RESPAWN, V(100, 100))
+        system_player_invulnerability(self.world, 1.5, RESPAWN)
+        system_player_death(self.world, RESPAWN, OBSTACLES)
+        self.assertTrue(is_vulnerable(self.world, self.player))
+        self.assertEqual(ServiceLocator.game_state_service.lives, 2)
 
     def test_bala_del_propio_jugador_no_lo_mata(self):
         create_player_bullet(self.world, PLAYER_INFO["weapon"]["bullet"], V(106, 106), V(1, 0))
-        system_player_death(self.world, RESPAWN)
+        system_player_death(self.world, RESPAWN, OBSTACLES)
         self.assertFalse(self.world.has_component(self.player, CPlayerDead))
 
     def test_sin_choque_no_pasa_nada(self):
         create_enemy(self.world, ENEMIES_INFO, V(300, 300), EnemyType.I)
-        system_player_death(self.world, RESPAWN)
+        system_player_death(self.world, RESPAWN, OBSTACLES)
         self.assertTrue(is_vulnerable(self.world, self.player))
         self.assertEqual(ServiceLocator.game_state_service.lives, 3)
 
     def test_pierde_una_vida(self):
         self.hit_with_enemy()
-        system_player_death(self.world, RESPAWN)
+        system_player_death(self.world, RESPAWN, OBSTACLES)
         self.assertEqual(ServiceLocator.game_state_service.lives, 2)
 
     def test_queda_oculto_quieto_y_sin_velocidad(self):
         c_pm = self.world.component_for_entity(self.player, CPlayerMovement)
         system_player_acceleration(self.world, 2.0)
         self.hit_with_enemy()
-        system_player_death(self.world, RESPAWN)
+        system_player_death(self.world, RESPAWN, OBSTACLES)
         self.assertTrue(self.world.has_component(self.player, CTagHidden))
         self.assertEqual(self.world.component_for_entity(self.player, CVelocity).vel, V(0, 0))
         self.assertEqual(c_pm.speed, 0.0)
 
     def test_provoca_varias_explosiones(self):
         self.hit_with_enemy()
-        system_player_death(self.world, RESPAWN)
+        system_player_death(self.world, RESPAWN, OBSTACLES)
         self.assertEqual(len(self.world.get_component(CExplosionBurst)), 1)
         self.assertEqual(len(explosions(self.world)), 1)
 
     def test_muerto_no_vuelve_a_perder_vidas(self):
         self.hit_with_enemy()
-        system_player_death(self.world, RESPAWN)
+        system_player_death(self.world, RESPAWN, OBSTACLES)
         self.hit_with_enemy()
-        system_player_death(self.world, RESPAWN)
+        system_player_death(self.world, RESPAWN, OBSTACLES)
         self.assertEqual(ServiceLocator.game_state_service.lives, 2)
 
     def test_muerto_no_acelera_ni_dispara(self):
         self.hit_with_enemy()
-        system_player_death(self.world, RESPAWN)
+        system_player_death(self.world, RESPAWN, OBSTACLES)
         system_player_acceleration(self.world, 1.0)
         system_player_fire(self.world)
         self.assertEqual(self.world.component_for_entity(self.player, CVelocity).vel, V(0, 0))
@@ -145,32 +186,36 @@ class TestReaparicion(unittest.TestCase):
         kill_player(self.world, self.player, RESPAWN)
 
     def test_no_reaparece_antes_del_retraso(self):
-        self.assertFalse(system_player_respawn(self.world, 0.5, RESPAWN))
+        self.assertFalse(system_player_respawn(self.world, 0.5, RESPAWN, SPAWN))
         self.assertTrue(self.world.has_component(self.player, CPlayerDead))
         self.assertTrue(self.world.has_component(self.player, CTagHidden))
 
-    def test_reaparece_despues_del_retraso_en_el_mismo_lugar(self):
-        self.assertFalse(system_player_respawn(self.world, 1.01, RESPAWN))
+    def test_reaparece_despues_del_retraso_en_el_inicio_del_nivel(self):
+        self.assertFalse(system_player_respawn(self.world, 1.01, RESPAWN, SPAWN))
         self.assertFalse(self.world.has_component(self.player, CPlayerDead))
         self.assertFalse(self.world.has_component(self.player, CTagHidden))
+        self.assertEqual(self.world.component_for_entity(self.player, CTransform).pos, SPAWN)
+
+    def test_muerto_no_se_mueve_al_inicio_antes_del_retraso(self):
+        system_player_respawn(self.world, 0.5, RESPAWN, SPAWN)
         self.assertEqual(self.world.component_for_entity(self.player, CTransform).pos, V(100, 100))
 
     def test_reaparece_invulnerable_y_arranca_despacio(self):
-        system_player_respawn(self.world, 1.01, RESPAWN)
+        system_player_respawn(self.world, 1.01, RESPAWN, SPAWN)
         self.assertTrue(self.world.has_component(self.player, CPlayerInvulnerable))
         self.assertEqual(self.world.component_for_entity(self.player, CPlayerMovement).speed, 0.0)
 
     def test_invulnerable_no_muere_ni_mata(self):
-        system_player_respawn(self.world, 1.01, RESPAWN)
+        system_player_respawn(self.world, 1.01, RESPAWN, SPAWN)
         lives = ServiceLocator.game_state_service.lives
         enemy = create_enemy(self.world, ENEMIES_INFO, V(100, 100), EnemyType.I)
-        system_player_death(self.world, RESPAWN)
+        system_player_death(self.world, RESPAWN, OBSTACLES)
         self.assertEqual(ServiceLocator.game_state_service.lives, lives)
         self.assertTrue(self.world.entity_exists(enemy))
         self.assertFalse(self.world.has_component(self.player, CPlayerDead))
 
     def test_la_invulnerabilidad_termina_y_vuelve_a_ser_vulnerable(self):
-        system_player_respawn(self.world, 1.01, RESPAWN)
+        system_player_respawn(self.world, 1.01, RESPAWN, SPAWN)
         for _ in range(11):
             system_player_invulnerability(self.world, 0.1, RESPAWN)
         self.assertFalse(self.world.has_component(self.player, CPlayerInvulnerable))
@@ -178,7 +223,7 @@ class TestReaparicion(unittest.TestCase):
         self.assertTrue(is_vulnerable(self.world, self.player))
 
     def test_parpadea_mientras_es_invulnerable(self):
-        system_player_respawn(self.world, 1.01, RESPAWN)
+        system_player_respawn(self.world, 1.01, RESPAWN, SPAWN)
         system_player_invulnerability(self.world, 0.05, RESPAWN)
         self.assertFalse(self.world.has_component(self.player, CTagHidden))
         system_player_invulnerability(self.world, 0.1, RESPAWN)
@@ -187,10 +232,10 @@ class TestReaparicion(unittest.TestCase):
         self.assertFalse(self.world.has_component(self.player, CTagHidden))
 
     def test_vuelve_a_morir_despues_de_la_invulnerabilidad(self):
-        system_player_respawn(self.world, 1.01, RESPAWN)
+        system_player_respawn(self.world, 1.01, RESPAWN, SPAWN)
         system_player_invulnerability(self.world, 1.5, RESPAWN)
-        create_enemy(self.world, ENEMIES_INFO, V(100, 100), EnemyType.I)
-        system_player_death(self.world, RESPAWN)
+        create_enemy(self.world, ENEMIES_INFO, SPAWN, EnemyType.I)
+        system_player_death(self.world, RESPAWN, OBSTACLES)
         self.assertEqual(ServiceLocator.game_state_service.lives, 1)
 
 
@@ -208,8 +253,8 @@ class TestSinVidas(unittest.TestCase):
 
     def test_avisa_el_fin_solo_despues_del_retraso_y_no_reaparece(self):
         kill_player(self.world, self.player, RESPAWN)
-        self.assertFalse(system_player_respawn(self.world, 0.5, RESPAWN))
-        self.assertTrue(system_player_respawn(self.world, 0.6, RESPAWN))
+        self.assertFalse(system_player_respawn(self.world, 0.5, RESPAWN, SPAWN))
+        self.assertTrue(system_player_respawn(self.world, 0.6, RESPAWN, SPAWN))
         self.assertTrue(self.world.has_component(self.player, CPlayerDead))
 
     def test_con_vidas_de_reserva_no_es_fin(self):
@@ -261,6 +306,52 @@ class TestMuerteEnPlayScene(unittest.TestCase):
         self.assertFalse(self.world.has_component(player, CPlayerDead))
         self.assertTrue(self.world.has_component(player, CPlayerInvulnerable))
         self.assertIsNone(self.engine._scene_name_to_switch)
+
+    def test_el_jugador_reaparece_en_el_inicio_del_nivel(self):
+        self.scene.process_events(key_event(pygame.KEYDOWN, pygame.K_l))
+        self.run_scene(self.respawn["delay"] + 0.05)
+        pos = self.world.component_for_entity(self.scene._player_entity, CTransform).pos
+        self.assertLess(pos.distance_to(self.scene._player_spawn_pos), 5)
+
+    def test_la_camara_sigue_al_jugador_en_el_mismo_paso_en_que_reaparece(self):
+        self.scene.process_events(key_event(pygame.KEYDOWN, pygame.K_l))
+        player = self.scene._player_entity
+        while self.world.has_component(player, CPlayerDead):
+            self.scene.simulate(1 / 60)
+        c_t = self.world.component_for_entity(player, CTransform)
+        c_s = self.world.component_for_entity(player, CSurface)
+        center = c_t.pos + V(c_s.area.size) / 2
+        camera = get_camera(self.world)
+        self.assertLess(wrapped_delta(camera.center, center, camera.world_size).length(), 1)
+
+    def test_los_enemigos_que_salen_al_reaparecer_no_aparecen_en_pantalla(self):
+        # Muere a una pantalla a la derecha del inicio: la vista vieja y la nueva se tocan.
+        player = self.scene._player_entity
+        view_w = get_camera(self.world).viewport.w
+        self.world.component_for_entity(player, CTransform).pos.update(self.scene._player_spawn_pos + V(view_w, 0))
+        self.scene.simulate(1 / 60)
+        self.scene.process_events(key_event(pygame.KEYDOWN, pygame.K_l))
+        self.world.component_for_entity(player, CPlayerDead).remaining = 0.0
+        for _, c_sp in self.world.get_component(CEnemySpawner):
+            c_sp.time_to_spawn = 0.0
+            c_sp.active = True
+            c_sp.max_alive = 1000
+        before = {e for e, _ in self.world.get_component(CEnemy)}
+
+        def left_side(view_size, size, margin, rng=None):
+            return V(-size.x - margin, view_size.y / 2)
+
+        # El enemigo sale por el borde izquierdo de la vista que recibe el spawner.
+        with mock.patch("src.ecs.systems.s_enemy_spawner.offscreen_offset", left_side):
+            self.scene.simulate(1 / 60)
+        camera = get_camera(self.world)
+        new = [e for e, _ in self.world.get_component(CEnemy) if e not in before]
+        self.assertTrue(new)
+        for enemy in new:
+            c_t = self.world.component_for_entity(enemy, CTransform)
+            c_s = self.world.component_for_entity(enemy, CSurface)
+            delta = wrapped_delta(camera.center, c_t.pos + V(c_s.area.size) / 2, camera.world_size)
+            self.assertGreater(abs(delta.x), camera.viewport.w / 2)
 
     def test_sin_vidas_pasa_a_la_escena_de_derrota(self):
         ServiceLocator.game_state_service.lives = 0
