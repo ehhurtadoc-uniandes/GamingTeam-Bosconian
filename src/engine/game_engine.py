@@ -17,6 +17,7 @@ class GameEngine:
         constants = ServiceLocator.constants_service
         window = ServiceLocator.configs_service.get(constants.window_config)
         pygame.init()
+        ServiceLocator.gamepad_service.open_connected()
         size = window["size"]
         # En web (pygbag) SCALED falla con "failed to create renderer"; ahí el navegador escala el canvas.
         flags = 0 if sys.platform == "emscripten" else pygame.SCALED
@@ -74,6 +75,7 @@ class GameEngine:
 
     def _process_events(self) -> None:
         for event in pygame.event.get():
+            ServiceLocator.gamepad_service.handle_event(event)
             self._current_scene.process_events(event)
             if event.type == pygame.QUIT:
                 self.is_running = False

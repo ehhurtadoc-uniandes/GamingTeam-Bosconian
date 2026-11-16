@@ -245,6 +245,8 @@ class PlayScene(Scene):
             self._pause_text = None
 
     def do_process_events(self, event: pygame.event.Event) -> None:
+        if event.type == pygame.JOYDEVICEREMOVED:
+            self._held_direction_keys.clear()
         # Al perder el foco pygame puede no enviar el KEYUP; sin esto una flecha quedaría "pegada".
         if event.type == pygame.WINDOWFOCUSLOST:
             self._held_direction_keys.clear()
