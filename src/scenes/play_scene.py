@@ -33,6 +33,8 @@ from src.ecs.systems.s_movement import system_movement
 from src.ecs.systems.s_obstacles import system_mine_blast, system_player_bullet_obstacle
 from src.ecs.systems.s_offscreen_despawn import system_offscreen_despawn
 from src.ecs.systems.s_pause import system_pause_visibility
+from src.ecs.systems.s_player_death import (is_vulnerable, kill_player, system_player_death,
+                                           system_player_invulnerability, system_player_respawn)
 from src.ecs.systems.s_player_fire import system_player_fire, system_player_weapon_cooldown
 from src.ecs.systems.s_player_movement import system_player_acceleration, system_player_direction
 from src.ecs.systems.s_score import system_score_hud
@@ -91,6 +93,8 @@ class PlayScene(Scene):
         self._pause_text: int | None = None
         self._pause_info: dict = {}
         self._show_hitboxes = False
+        self._respawn_info: dict = {}
+        self._player_spawn_pos = pygame.Vector2(0, 0)
 
     def do_create(self) -> None:
         constants = ServiceLocator.constants_service
@@ -104,8 +108,10 @@ class PlayScene(Scene):
         self.world_size = world_size_from_config(world_info)
         self._create_level()
         player_info = ServiceLocator.configs_service.get(constants.player_config)
+        self._respawn_info = player_info["respawn"]
         size = player_info["size"]
         pos = self._player_start - pygame.Vector2(size["w"], size["h"]) / 2
+        self._player_spawn_pos = pygame.Vector2(pos)
         self._player_entity = create_player(self.ecs_world, player_info, pos)
         player_center = pos + pygame.Vector2(size["w"], size["h"]) / 2
         create_camera(self.ecs_world, world_info["camera"], self.world_size, player_center)
@@ -153,18 +159,25 @@ class PlayScene(Scene):
             # En pausa nada se mueve; las estrellas siguen brillando quietas (LC-ESC-04.3.2).
             system_star_blink(self.ecs_world, delta_time, self._stars_info["blink"])
             return
+        constants = ServiceLocator.constants_service
+        # Al principio: si reaparece en el inicio, los enemigos ya lo persiguen ahí en este paso.
+        if system_player_respawn(self.ecs_world, delta_time, self._respawn_info, self._player_spawn_pos):
+            self.switch_scene(constants.defeat_scene)
         system_player_acceleration(self.ecs_world, delta_time)
         system_player_weapon_cooldown(self.ecs_world, delta_time)
         # Los enemigos persiguen la posición del jugador. El estado va antes que el
         # steering porque ajusta sus pesos. Con world_size persiguen cruzando los bordes.
         player_pos = self.ecs_world.component_for_entity(self._player_entity, CTransform).pos
-        # Los enemigos nuevos salen fuera de lo que ve la cámara (aún en la posición del paso anterior).
+        player_size = self.ecs_world.component_for_entity(self._player_entity, CSurface).area.size
+        # La cámara ya está centrada en el jugador, salvo que acabe de reaparecer en el inicio:
+        # se centra antes del spawner para que los enemigos nuevos no salgan dentro de la pantalla.
+        system_camera(self.ecs_world, player_pos + pygame.Vector2(player_size) / 2)
+        # Los enemigos nuevos salen fuera de lo que ve la cámara (centrada en el jugador antes de moverse).
         system_enemy_spawner(self.ecs_world, delta_time, get_camera(self.ecs_world),
                              self._enemies_info, self._spawn_margin)
         system_enemy_state(self.ecs_world, delta_time, player_pos, self.world_size)
         system_steering(self.ecs_world, delta_time, player_pos, self.world_size)
         # Las torretas disparan antes del movimiento para que la bala nueva avance en este frame.
-        player_size = self.ecs_world.component_for_entity(self._player_entity, CSurface).area.size
         player_center = player_pos + pygame.Vector2(player_size) / 2
         system_turret(self.ecs_world, delta_time, player_center, self._bullet_info, self.world_size)
         system_movement(self.ecs_world, delta_time)
@@ -184,7 +197,11 @@ class PlayScene(Scene):
         system_animation(self.ecs_world, delta_time)
         # Después de la animación, para que la explosión se borre justo al terminar.
         # Devuelve True si la explosión alcanzó al jugador: su muerte la maneja el área del jugador.
-        system_mine_blast(self.ecs_world, self.world_size, player_center)
+        player_hit_by_blast = system_mine_blast(self.ecs_world, self.world_size, player_center)
+        system_player_death(self.ecs_world, self._respawn_info, self._obstacles_info, self.world_size)
+        if player_hit_by_blast and is_vulnerable(self.ecs_world, self._player_entity):
+            kill_player(self.ecs_world, self._player_entity, self._respawn_info)
+        system_player_invulnerability(self.ecs_world, delta_time, self._respawn_info)
         # Al final, para que el HUD muestre los puntos sumados en este paso.
         system_score_hud(self.ecs_world)
         system_lives_hud(self.ecs_world)
@@ -235,6 +252,10 @@ class PlayScene(Scene):
                 create_explosion_for(self.ecs_world, self._player_entity)
                 for enemy, _ in self.ecs_world.get_component(CEnemy):
                     destroy_with_explosion(self.ecs_world, enemy)
+        elif action.name == constants.debug_kill_command:
+            if action.phase == CommandPhase.START and self._debug_info["enabled"]:
+                if is_vulnerable(self.ecs_world, self._player_entity):
+                    kill_player(self.ecs_world, self._player_entity, self._respawn_info)
         elif action.name in constants.debug_spawn_commands:
             if action.phase == CommandPhase.START and self._debug_info["enabled"]:
                 self._spawn_debug_enemy(EnemyType(constants.debug_spawn_commands[action.name]))

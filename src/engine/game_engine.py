@@ -35,6 +35,7 @@ class GameEngine:
             "instructions": TextScene(self, constants.instructions_config),
             "credits": TextScene(self, constants.credits_config),
             "play": PlayScene(self),
+            "defeat": TextScene(self, constants.defeat_config),
         }
         self._current_scene: Scene | None = None
         self._scene_name_to_switch: str | None = None
