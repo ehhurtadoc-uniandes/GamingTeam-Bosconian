@@ -6,6 +6,7 @@ hoy 1024 x 1536) y son el **centro** de lo que se crea.
 
 ```json
 {
+  "special": true,
   "player_start": { "x": 512, "y": 768 },
   "bases": [
     { "pos": { "x": 56, "y": 48 }, "orientation": "horizontal" },
@@ -24,6 +25,7 @@ hoy 1024 x 1536) y son el **centro** de lo que se crea.
 
 | Clave | Obligatoria | Qué es |
 |---|---|---|
+| `special` | no | `true` si el nivel da la habilidad especial (tres balas al frente y una atrás); sin la clave, no la da. Al empezar el nivel sale el mensaje de `assets/cfg/player.json` > `special_shot`. |
 | `player_start` | no | Dónde empieza el jugador. Si falta, en el centro de la pantalla. |
 | `bases` | no | Lista de bases (sin la clave, el nivel no tiene bases): centro (`pos`) y `orientation` (`horizontal` o `vertical`). La usa `create_bases`. |
 | `spawner` | sí | Cómo aparecen los enemigos del nivel (lo usa `create_enemy_spawner`). |
@@ -40,7 +42,6 @@ Los tipos de obstáculo (imágenes, puntos, hitbox, animación y explosión de l
 Se agregarán sin romper los niveles que ya existen:
 
 - `round`: número de ronda que muestra la interfaz "ROUND X".
-- `special`: habilidad especial del nivel.
 - `music`: ruta de la música del nivel.
 - `core`: `normal` o `animated`, y si trae enemigo E.
 
