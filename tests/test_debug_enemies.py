@@ -11,6 +11,7 @@ import pygame
 from src.ecs.components.c_enemy_state import CEnemyState, EnemyState
 from src.ecs.components.c_transform import CTransform
 from src.ecs.components.c_enemy import CEnemy, EnemyType
+from src.ecs.systems.s_camera import get_camera, view_top_left
 from src.ecs.systems.s_debug_labels import enemy_label
 from src.engine.game_engine import GameEngine
 from src.engine.service_locator import ServiceLocator
@@ -46,8 +47,11 @@ class TestDebugEnemies(unittest.TestCase):
         self.scene.process_events(key_event(pygame.KEYDOWN, pygame.K_1))
         entity, _ = self.scene.ecs_world.get_component(CEnemy)[0]
         pos = pygame.Vector2(self.scene.ecs_world.component_for_entity(entity, CTransform).pos)
-        rect = self.scene.screen_rect
-        self.assertTrue(pos.x in (0, rect.width - 8) or pos.y in (0, rect.height - 8))
+        # Aparece en el borde de lo que ve la cámara (relativo a su esquina superior izquierda).
+        camera = get_camera(self.scene.ecs_world)
+        rel = pos - view_top_left(camera)
+        rect = camera.viewport
+        self.assertTrue(rel.x in (0, rect.width - 8) or rel.y in (0, rect.height - 8))
         self.scene.simulate(1 / 60)
         self.scene.simulate(1 / 60)
         self.assertNotEqual(self.scene.ecs_world.component_for_entity(entity, CTransform).pos, pos)
