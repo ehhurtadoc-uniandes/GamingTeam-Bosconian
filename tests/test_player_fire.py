@@ -11,6 +11,7 @@ import pygame
 from src.create.prefab_player import create_player
 from src.ecs.components.c_player_movement import CPlayerMovement
 from src.ecs.components.c_player_weapon import CPlayerWeapon
+from src.ecs.components.c_special_shot import CSpecialShot
 from src.ecs.components.c_transform import CTransform
 from src.ecs.components.c_velocity import CVelocity
 from src.ecs.components.tags.c_tag_player_bullet import CTagPlayerBullet
@@ -116,6 +117,7 @@ class TestDisparoEnPlayScene(unittest.TestCase):
             self.assertIn(key, info["weapon"]["bullet"])
 
     def test_z_dispara_dos_balas(self):
+        self.scene.ecs_world.remove_component(self.scene._player_entity, CSpecialShot)
         self.scene.process_events(key_event(pygame.KEYDOWN, pygame.K_z))
         self.assertEqual(len(bullets(self.scene.ecs_world)), 2)
 
