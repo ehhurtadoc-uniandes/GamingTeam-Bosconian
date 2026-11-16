@@ -25,6 +25,8 @@ class ConstantsService:
         self.instructions_config = "assets/cfg/instructions.json"
         self.credits_config = "assets/cfg/credits.json"
         self.pause_config = "assets/cfg/pause.json"
+        self.obstacles_config = "assets/cfg/obstacles.json"
+        self.minimap_config = "assets/cfg/minimap.json"
 
         # Delta máximo de un frame, en segundos: dos frames a 60 FPS. Ver GameEngine._calculate_time.
         # Con más, una bala y un enemigo que van de frente (~100 px/s cada uno) podrían cruzarse
@@ -35,6 +37,9 @@ class ConstantsService:
         self.player_default_direction = pygame.Vector2(0, -1)
         # Ejes de input con magnitud menor a esto se ignoran (drift de joystick, LC-JUG-02).
         self.player_dead_zone = 0.3
+
+        # Intentos para ubicar un obstáculo lejos de lo que ya está en el mundo antes de rendirse.
+        self.obstacle_place_tries = 200
 
         # Una base de Bosconian siempre tiene seis torretas; base.json debe traer un offset para cada una.
         self.turrets_per_base = 6
