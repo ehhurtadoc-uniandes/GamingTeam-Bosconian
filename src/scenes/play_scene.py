@@ -8,14 +8,16 @@ from src.create.prefab_camera import create_camera
 from src.create.prefab_enemy import create_enemy
 from src.create.prefab_enemy_spawner import create_enemy_spawner
 from src.create.prefab_hud import create_lives_hud, create_score_hud
+from src.create.prefab_minimap import create_minimap
+from src.create.prefab_obstacle import create_obstacles
 from src.create.prefab_player import create_player
 from src.create.prefab_stars import create_starfield
 from src.create.prefab_text import create_interface_text
 from src.ecs.components.c_input_command import CInputCommand, CommandPhase
 from src.ecs.components.c_surface import CSurface
 from src.ecs.components.c_transform import CTransform
-from src.ecs.components.c_enemy import CEnemy, EnemyType
 from src.create.prefab_explosion import create_explosion_for, destroy_with_explosion
+from src.ecs.components.c_enemy import CEnemy, EnemyType
 from src.ecs.systems.s_animation import system_animation
 from src.ecs.systems.s_camera import get_camera, system_camera, view_top_left
 from src.ecs.systems.s_debug_hitboxes import system_debug_hitboxes
@@ -26,7 +28,9 @@ from src.ecs.systems.s_enemy_state import system_enemy_state
 from src.ecs.systems.s_explosion_burst import system_explosion_burst
 from src.ecs.systems.s_lifetime import system_lifetime
 from src.ecs.systems.s_lives_hud import system_lives_hud
+from src.ecs.systems.s_minimap import system_minimap
 from src.ecs.systems.s_movement import system_movement
+from src.ecs.systems.s_obstacles import system_mine_blast, system_player_bullet_obstacle
 from src.ecs.systems.s_offscreen_despawn import system_offscreen_despawn
 from src.ecs.systems.s_pause import system_pause_visibility
 from src.ecs.systems.s_player_fire import system_player_fire, system_player_weapon_cooldown
@@ -96,13 +100,12 @@ class PlayScene(Scene):
         self._show_hitboxes = False
         self._pause_text = None
         self._pause_info = ServiceLocator.configs_service.get(constants.pause_config)
-        # Las estrellas se crean primero; igual system_rendering las dibuja siempre debajo (CTagBackground).
         world_info = ServiceLocator.configs_service.get(constants.world_config)
         self.world_size = world_size_from_config(world_info)
         self._create_level()
         player_info = ServiceLocator.configs_service.get(constants.player_config)
         size = player_info["size"]
-        pos = pygame.Vector2(self.screen_rect.center) - pygame.Vector2(size["w"], size["h"]) / 2
+        pos = self._player_start - pygame.Vector2(size["w"], size["h"]) / 2
         self._player_entity = create_player(self.ecs_world, player_info, pos)
         player_center = pos + pygame.Vector2(size["w"], size["h"]) / 2
         create_camera(self.ecs_world, world_info["camera"], self.world_size, player_center)
@@ -112,9 +115,13 @@ class PlayScene(Scene):
         score_info = ServiceLocator.configs_service.get(constants.score_config)
         create_score_hud(self.ecs_world, score_info["hud"])
         create_lives_hud(self.ecs_world, score_info["lives"]["hud"])
+        create_minimap(self.ecs_world, ServiceLocator.configs_service.get(constants.minimap_config))
 
     def _create_level(self) -> None:
-        """Crea las entidades del nivel actual según su JSON: las bases y el spawner de enemigos."""
+        """Crea las entidades del nivel actual según su JSON: bases, spawner de enemigos y obstáculos.
+
+        El formato del JSON de nivel está en docs/formato-niveles.md.
+        """
         constants = ServiceLocator.constants_service
         level_path = ServiceLocator.configs_service.get(constants.levels_config)["levels"][self.level_index]
         level_info = ServiceLocator.configs_service.get(level_path)
@@ -122,11 +129,24 @@ class PlayScene(Scene):
         self._bullet_info = base_info["bullet"]
         self._enemies_info = ServiceLocator.configs_service.get(constants.enemies_config)
         self._spawn_margin = ServiceLocator.configs_service.get(constants.spawner_config)["offscreen_margin"]
+        # Sin player_start en el nivel, el jugador empieza en el centro de la pantalla.
+        start = level_info.get("player_start")
+        self._player_start = (pygame.Vector2(start["x"], start["y"]) if start
+                              else pygame.Vector2(self.screen_rect.center))
         try:
-            create_bases(self.ecs_world, base_info, level_info)
+            bases = create_bases(self.ecs_world, base_info, level_info)
             create_enemy_spawner(self.ecs_world, level_info)
         except (KeyError, ValueError) as error:
             raise ValueError(f"{level_path}: {error}") from error
+        # Los obstáculos no aparecen encima de las bases ni del jugador.
+        avoid = [self._player_start] + [self._center_of(base) for base in bases]
+        self._obstacles_info = ServiceLocator.configs_service.get(constants.obstacles_config)
+        create_obstacles(self.ecs_world, self._obstacles_info, level_info, self.world_size, avoid)
+
+    def _center_of(self, entity: int) -> pygame.Vector2:
+        c_t = self.ecs_world.component_for_entity(entity, CTransform)
+        c_s = self.ecs_world.component_for_entity(entity, CSurface)
+        return c_t.pos + pygame.Vector2(c_s.area.size) / 2
 
     def do_update(self, delta_time: float) -> None:
         if self.state == PlayState.PAUSED:
@@ -151,17 +171,24 @@ class PlayScene(Scene):
         # Justo después de mover: lo que salió por un borde vuelve por el opuesto.
         system_wraparound(self.ecs_world, self.world_size)
         # La cámara sigue al jugador ya movido, para que no se vea un frame atrasada.
-        system_camera(self.ecs_world, player_pos + pygame.Vector2(player_size) / 2)
+        # player_pos ya cambió con el movimiento: se recalcula el centro para la cámara y las explosiones.
+        player_center = player_pos + pygame.Vector2(player_size) / 2
+        system_camera(self.ecs_world, player_center)
         system_starfield(self.ecs_world, delta_time, get_camera(self.ecs_world), self._stars_info["blink"])
-        system_animation(self.ecs_world, delta_time)
         system_explosion_burst(self.ecs_world, delta_time)
         system_lifetime(self.ecs_world, delta_time)
         # "Salir de la pantalla" es salir de lo que ve la cámara (el área de juego), no de la ventana.
         system_offscreen_despawn(self.ecs_world, camera=get_camera(self.ecs_world))
         system_enemy_bullet_collision(self.ecs_world, self.world_size)
+        system_player_bullet_obstacle(self.ecs_world, self._obstacles_info, self.world_size)
+        system_animation(self.ecs_world, delta_time)
+        # Después de la animación, para que la explosión se borre justo al terminar.
+        # Devuelve True si la explosión alcanzó al jugador: su muerte la maneja el área del jugador.
+        system_mine_blast(self.ecs_world, self.world_size, player_center)
         # Al final, para que el HUD muestre los puntos sumados en este paso.
         system_score_hud(self.ecs_world)
         system_lives_hud(self.ecs_world)
+        system_minimap(self.ecs_world, delta_time, self.world_size)
 
     def do_draw(self, screen: pygame.Surface) -> None:
         super().do_draw(screen)
