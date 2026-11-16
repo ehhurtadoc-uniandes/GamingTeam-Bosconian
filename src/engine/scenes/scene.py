@@ -27,7 +27,9 @@ class Scene:
     def start(self) -> None:
         # Todas las escenas reciben los mismos comandos; cada una decide en do_action cuáles usa.
         input_config = ServiceLocator.constants_service.input_config
-        create_input(self.ecs_world, ServiceLocator.configs_service.get(input_config))
+        configs = ServiceLocator.configs_service
+        create_input(self.ecs_world, configs.get(input_config),
+                     configs.get(ServiceLocator.constants_service.gamepad_config))
         self.do_create()
 
     def process_events(self, event: pygame.event.Event) -> None:

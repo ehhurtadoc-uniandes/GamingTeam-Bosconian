@@ -11,6 +11,7 @@ class ConstantsService:
     def __init__(self) -> None:
         self.window_config = "assets/cfg/window.json"
         self.input_config = "assets/cfg/input.json"
+        self.gamepad_config = "assets/cfg/gamepad.json"
         self.interface_config = "assets/cfg/interface.json"
         self.score_config = "assets/cfg/score.json"
         self.player_config = "assets/cfg/player.json"
