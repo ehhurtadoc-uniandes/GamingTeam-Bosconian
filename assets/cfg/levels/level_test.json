@@ -9,5 +9,12 @@
     "max_alive": 6,
     "weights": { "I": 3, "P": 2, "E": 1 },
     "wander_scale": 1.0
+  },
+  "obstacles": {
+    "seed": 1,
+    "min_distance": 40,
+    "rock": 40,
+    "solid_rock": 10,
+    "mine": 20
   }
 }
