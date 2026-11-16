@@ -21,6 +21,7 @@ from src.ecs.systems.s_camera import get_camera, system_camera, view_top_left
 from src.ecs.systems.s_debug_hitboxes import system_debug_hitboxes
 from src.ecs.systems.s_debug_labels import system_enemy_labels
 from src.ecs.systems.s_enemy_bullet_collision import system_enemy_bullet_collision
+from src.ecs.systems.s_enemy_bounce import system_enemy_bounce
 from src.ecs.systems.s_enemy_spawner import system_enemy_spawner
 from src.ecs.systems.s_enemy_state import system_enemy_state
 from src.ecs.systems.s_explosion_burst import system_explosion_burst
@@ -153,6 +154,7 @@ class PlayScene(Scene):
         player_center = player_pos + pygame.Vector2(player_size) / 2
         system_turret(self.ecs_world, delta_time, player_center, self._bullet_info, self.world_size)
         system_movement(self.ecs_world, delta_time)
+        system_enemy_bounce(self.ecs_world, self.world_size)
         # Justo después de mover: lo que salió por un borde vuelve por el opuesto.
         system_wraparound(self.ecs_world, self.world_size)
         # La cámara sigue al jugador ya movido, para que no se vea un frame atrasada.
