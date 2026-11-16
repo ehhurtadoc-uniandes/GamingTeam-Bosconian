@@ -26,6 +26,7 @@ class ConstantsService:
         self.credits_config = "assets/cfg/credits.json"
         self.pause_config = "assets/cfg/pause.json"
         self.obstacles_config = "assets/cfg/obstacles.json"
+        self.minimap_config = "assets/cfg/minimap.json"
 
         # Delta máximo de un frame, en segundos: dos frames a 60 FPS. Ver GameEngine._calculate_time.
         # Con más, una bala y un enemigo que van de frente (~100 px/s cada uno) podrían cruzarse

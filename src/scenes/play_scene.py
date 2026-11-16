@@ -8,6 +8,7 @@ from src.create.prefab_camera import create_camera
 from src.create.prefab_enemy import create_enemy
 from src.create.prefab_enemy_spawner import create_enemy_spawner
 from src.create.prefab_hud import create_lives_hud, create_score_hud
+from src.create.prefab_minimap import create_minimap
 from src.create.prefab_obstacle import create_obstacles
 from src.create.prefab_player import create_player
 from src.create.prefab_stars import create_starfield
@@ -24,6 +25,7 @@ from src.ecs.systems.s_enemy_spawner import system_enemy_spawner
 from src.ecs.systems.s_enemy_state import system_enemy_state
 from src.ecs.systems.s_lifetime import system_lifetime
 from src.ecs.systems.s_lives_hud import system_lives_hud
+from src.ecs.systems.s_minimap import system_minimap
 from src.ecs.systems.s_movement import system_movement
 from src.ecs.systems.s_obstacles import system_mine_blast, system_player_bullet_obstacle
 from src.ecs.systems.s_offscreen_despawn import system_offscreen_despawn
@@ -108,6 +110,7 @@ class PlayScene(Scene):
         score_info = ServiceLocator.configs_service.get(constants.score_config)
         create_score_hud(self.ecs_world, score_info["hud"])
         create_lives_hud(self.ecs_world, score_info["lives"]["hud"])
+        create_minimap(self.ecs_world, ServiceLocator.configs_service.get(constants.minimap_config))
 
     def _create_level(self) -> None:
         """Crea las entidades del nivel actual según su JSON: bases, spawner de enemigos y obstáculos.
@@ -177,6 +180,7 @@ class PlayScene(Scene):
         # Al final, para que el HUD muestre los puntos sumados en este paso.
         system_score_hud(self.ecs_world)
         system_lives_hud(self.ecs_world)
+        system_minimap(self.ecs_world, delta_time, self.world_size)
 
     def do_draw(self, screen: pygame.Surface) -> None:
         super().do_draw(screen)
