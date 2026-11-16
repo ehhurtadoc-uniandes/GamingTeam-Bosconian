@@ -54,6 +54,7 @@ class ConstantsService:
         # Comando que pausa y reanuda la escena de juego (#35).
         self.pause_command = "PAUSE"
         self.fire_command = "PLAYER_FIRE"
+        self.debug_hitboxes_command = "DEBUG_HITBOXES"
         # Con el modo de depuración, estas teclas crean enemigos (valor de EnemyType) a pedido,
         # además de los del spawner (#28).
         self.debug_spawn_commands = {

@@ -16,6 +16,7 @@ from src.ecs.components.c_surface import CSurface
 from src.ecs.components.c_transform import CTransform
 from src.ecs.components.c_enemy import EnemyType
 from src.ecs.systems.s_camera import get_camera, system_camera, view_top_left
+from src.ecs.systems.s_debug_hitboxes import system_debug_hitboxes
 from src.ecs.systems.s_debug_labels import system_enemy_labels
 from src.ecs.systems.s_enemy_bullet_collision import system_enemy_bullet_collision
 from src.ecs.systems.s_enemy_spawner import system_enemy_spawner
@@ -82,12 +83,14 @@ class PlayScene(Scene):
         self.state = PlayState.PLAYING
         self._pause_text: int | None = None
         self._pause_info: dict = {}
+        self._show_hitboxes = False
 
     def do_create(self) -> None:
         constants = ServiceLocator.constants_service
         self._held_direction_keys.clear()
         self.level_index = ServiceLocator.game_state_service.level_index
         self.state = PlayState.PLAYING
+        self._show_hitboxes = False
         self._pause_text = None
         self._pause_info = ServiceLocator.configs_service.get(constants.pause_config)
         # Las estrellas se crean primero; igual system_rendering las dibuja siempre debajo (CTagBackground).
@@ -150,7 +153,7 @@ class PlayScene(Scene):
         system_lifetime(self.ecs_world, delta_time)
         # "Salir de la pantalla" es salir de lo que ve la cámara (el área de juego), no de la ventana.
         system_offscreen_despawn(self.ecs_world, camera=get_camera(self.ecs_world))
-        system_enemy_bullet_collision(self.ecs_world)
+        system_enemy_bullet_collision(self.ecs_world, self.world_size)
         # Al final, para que el HUD muestre los puntos sumados en este paso.
         system_score_hud(self.ecs_world)
         system_lives_hud(self.ecs_world)
@@ -164,6 +167,10 @@ class PlayScene(Scene):
         c = self._debug_info["label_color"]
         color = pygame.Color(c["r"], c["g"], c["b"])
         system_enemy_labels(self.ecs_world, screen, font, color, get_camera(self.ecs_world))
+        if self._show_hitboxes:
+            h = self._debug_info["hitbox_color"]
+            system_debug_hitboxes(self.ecs_world, screen, pygame.Color(h["r"], h["g"], h["b"]),
+                                  get_camera(self.ecs_world))
         help_pos = self._debug_info["help_pos"]
         help_text = ServiceLocator.texts_service.get(font, self._debug_info["help_text"], color)
         screen.blit(help_text, (help_pos["x"], help_pos["y"]))
@@ -188,6 +195,9 @@ class PlayScene(Scene):
         elif action.name == constants.fire_command:
             if action.phase == CommandPhase.START:
                 system_player_fire(self.ecs_world)
+        elif action.name == constants.debug_hitboxes_command:
+            if action.phase == CommandPhase.START and self._debug_info["enabled"]:
+                self._show_hitboxes = not self._show_hitboxes
         elif action.name in constants.debug_spawn_commands:
             if action.phase == CommandPhase.START and self._debug_info["enabled"]:
                 self._spawn_debug_enemy(EnemyType(constants.debug_spawn_commands[action.name]))
