@@ -2,6 +2,7 @@
   "size": { "w": 16, "h": 16 },
   "color": { "r": 80, "g": 160, "b": 255 },
   "hitbox": { "size": { "w": 12, "h": 12 } },
+  "respawn": { "delay": 2.0, "invulnerable_time": 2.0, "blink_interval": 0.1 },
   "movement": {
     "initial_speed": 0,
     "max_speed": 60,
