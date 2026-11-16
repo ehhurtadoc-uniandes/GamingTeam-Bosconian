@@ -1,3 +1,4 @@
+"""Detección de colisiones AABB entre hitbox (LC-COL-01)."""
 from collections import defaultdict
 
 import esper
@@ -9,12 +10,18 @@ from src.utils.wrap import wrapped_delta
 
 
 def hitbox_center(c_t: CTransform, c_h: CHitBox) -> pygame.Vector2:
+    """Centro de la hitbox en coordenadas de mundo."""
     return c_t.pos + c_h.offset + c_h.size / 2
 
 
 def hitboxes_overlap(center_a: pygame.Vector2, size_a: pygame.Vector2,
                      center_b: pygame.Vector2, size_b: pygame.Vector2,
                      world_size: pygame.Vector2 | None = None) -> bool:
+    """True si dos cajas, dadas por su centro y su tamaño, se solapan. Si solo se tocan, no.
+
+    Con world_size se mide por el camino más corto, así dos cajas a lados
+    opuestos de un borde del mundo también chocan (wraparound).
+    """
     delta = wrapped_delta(center_a, center_b, world_size)
     return abs(delta.x) < (size_a.x + size_b.x) / 2 and abs(delta.y) < (size_a.y + size_b.y) / 2
 
@@ -22,6 +29,19 @@ def hitboxes_overlap(center_a: pygame.Vector2, size_a: pygame.Vector2,
 def system_collision(world: esper.World, pairs: list[tuple[CollisionLayer, CollisionLayer]],
                      world_size: pygame.Vector2 | None = None
                      ) -> dict[tuple[CollisionLayer, CollisionLayer], list[tuple[int, int]]]:
+    """Devuelve, para cada par de capas pedido, las parejas de entidades cuyas hitbox se solapan.
+
+    Solo detecta: quien lo llama decide qué pasa (muerte, explosión, rebote, puntaje).
+
+    El resultado tiene una llave por cada par de pairs, tal como se pidió. El orden
+    del par es el orden de cada pareja: con (PLAYER_BULLET, ENEMY) las parejas son
+    (bala, enemigo). Si las dos capas son la misma, una entidad no choca consigo
+    misma y cada pareja sale una sola vez.
+
+    No incluye entidades ya borradas con delete_entity en este paso. Pero una misma
+    entidad puede salir en varias parejas (una bala sobre dos enemigos), así que
+    quien borre debe revisar entity_exists antes de reaccionar a la siguiente.
+    """
     by_layer: dict[CollisionLayer, list[tuple[int, pygame.Vector2, pygame.Vector2]]] = defaultdict(list)
     c_t: CTransform
     c_h: CHitBox

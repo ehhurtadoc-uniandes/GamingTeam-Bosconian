@@ -1,7 +1,7 @@
 {
   "explosion": {
     "size": { "w": 16, "h": 16 },
-    "frame_duration": 0.07,
+    "framerate": 14,
     "frames": [
       { "size": { "w": 4, "h": 4 }, "color": { "r": 255, "g": 255, "b": 255 } },
       { "size": { "w": 8, "h": 8 }, "color": { "r": 255, "g": 230, "b": 120 } },
