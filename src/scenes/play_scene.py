@@ -169,13 +169,15 @@ class PlayScene(Scene):
         # Justo después de mover: lo que salió por un borde vuelve por el opuesto.
         system_wraparound(self.ecs_world, self.world_size)
         # La cámara sigue al jugador ya movido, para que no se vea un frame atrasada.
-        system_camera(self.ecs_world, player_pos + pygame.Vector2(player_size) / 2)
+        # player_pos ya cambió con el movimiento: se recalcula el centro para la cámara y las explosiones.
+        player_center = player_pos + pygame.Vector2(player_size) / 2
+        system_camera(self.ecs_world, player_center)
         system_starfield(self.ecs_world, delta_time, get_camera(self.ecs_world), self._stars_info["blink"])
         system_lifetime(self.ecs_world, delta_time)
         # "Salir de la pantalla" es salir de lo que ve la cámara (el área de juego), no de la ventana.
         system_offscreen_despawn(self.ecs_world, camera=get_camera(self.ecs_world))
         system_enemy_bullet_collision(self.ecs_world, self.world_size)
-        system_player_bullet_obstacle(self.ecs_world, self._obstacles_info)
+        system_player_bullet_obstacle(self.ecs_world, self._obstacles_info, self.world_size)
         system_animation(self.ecs_world, delta_time)
         # Después de la animación, para que la explosión se borre justo al terminar.
         # Devuelve True si la explosión alcanzó al jugador: su muerte la maneja el área del jugador.

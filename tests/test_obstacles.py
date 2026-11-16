@@ -10,22 +10,24 @@ import esper
 import pygame
 
 from src.create.prefab_obstacle import create_obstacle, create_obstacles
+from src.create.prefab_player_bullet import create_player_bullet
 from src.ecs.components.c_animation import CAnimation
+from src.ecs.components.c_hitbox import CHitBox, CollisionLayer
 from src.ecs.components.c_mine_blast import CMineBlast
 from src.ecs.components.c_obstacle import CObstacle, ObstacleKind
 from src.ecs.components.c_surface import CSurface
 from src.ecs.components.c_transform import CTransform
 from src.ecs.components.c_enemy import CEnemy, EnemyType
 from src.ecs.systems.s_animation import system_animation
-from src.ecs.components.tags.c_tag_player_bullet import CTagPlayerBullet
-from src.ecs.systems.s_obstacles import (hit_obstacle, obstacle_hitbox, system_mine_blast,
-                                        system_player_bullet_obstacle)
+from src.ecs.systems.s_collision import hitbox_center
+from src.ecs.systems.s_obstacles import hit_obstacle, system_mine_blast, system_player_bullet_obstacle
 from src.engine.service_locator import ServiceLocator
 from src.utils.wrap import wrapped_delta
 
 WORLD = pygame.Vector2(1024, 1536)
 with open("assets/cfg/obstacles.json", encoding="utf-8") as f:
     OBSTACLES = json.load(f)
+BULLET_INFO = {"size": {"w": 3, "h": 3}, "color": {"r": 255, "g": 255, "b": 255}, "speed": 150}
 
 
 class TestObstacles(unittest.TestCase):
@@ -43,7 +45,8 @@ class TestObstacles(unittest.TestCase):
     def test_obstaculo_queda_centrado_y_sin_velocidad(self):
         rock = create_obstacle(self.world, OBSTACLES, ObstacleKind.ROCK, pygame.Vector2(100, 200), random.Random(0))
         self.assertEqual(self.center(rock), pygame.Vector2(100, 200))
-        self.assertEqual(len(self.world.components_for_entity(rock)), 3)
+        # Sprite, obstáculo, hitbox y posición: sin CVelocity, nada lo mueve.
+        self.assertEqual(len(self.world.components_for_entity(rock)), 4)
 
     def test_mina_animada_muestra_un_cuadro(self):
         mine = create_obstacle(self.world, OBSTACLES, ObstacleKind.MINE, pygame.Vector2(50, 50), random.Random(0))
@@ -72,10 +75,19 @@ class TestObstacles(unittest.TestCase):
 
     def test_hitbox_mas_pequena_que_el_sprite(self):
         rock = create_obstacle(self.world, OBSTACLES, ObstacleKind.ROCK, pygame.Vector2(100, 100), random.Random(0))
-        c_t, c_s, c_obs = (self.world.component_for_entity(rock, t) for t in (CTransform, CSurface, CObstacle))
-        hitbox = obstacle_hitbox(c_t, c_s, c_obs)
-        self.assertEqual(hitbox.w, c_s.area.w - 2 * c_obs.hitbox_margin)
-        self.assertEqual(hitbox.center, pygame.Rect(c_t.pos, c_s.area.size).center)
+        c_t, c_s, c_h = (self.world.component_for_entity(rock, t) for t in (CTransform, CSurface, CHitBox))
+        margin = OBSTACLES["rock"]["hitbox_margin"]
+        self.assertEqual(c_h.layer, CollisionLayer.OBSTACLE)
+        self.assertEqual(c_h.size, pygame.Vector2(c_s.area.size) - pygame.Vector2(2 * margin, 2 * margin))
+        self.assertEqual(hitbox_center(c_t, c_h), pygame.Vector2(100, 100))
+
+    def test_hitbox_de_la_mina_es_de_un_cuadro(self):
+        """La mina es una tira de dos cuadros: la hitbox sale del cuadro, no de la imagen completa."""
+        mine = create_obstacle(self.world, OBSTACLES, ObstacleKind.MINE, pygame.Vector2(50, 50), random.Random(0))
+        c_t, c_h = (self.world.component_for_entity(mine, t) for t in (CTransform, CHitBox))
+        margin = OBSTACLES["mine"]["hitbox_margin"]
+        self.assertEqual(c_h.size, pygame.Vector2(16 - 2 * margin, 16 - 2 * margin))
+        self.assertEqual(hitbox_center(c_t, c_h), pygame.Vector2(50, 50))
 
     def test_roca_se_destruye_y_da_puntos(self):
         rock = create_obstacle(self.world, OBSTACLES, ObstacleKind.ROCK, pygame.Vector2(100, 100), random.Random(0))
@@ -109,16 +121,57 @@ class TestObstacles(unittest.TestCase):
             self.world._clear_dead_entities()
         self.assertEqual(self.world.get_component(CMineBlast), [])
 
-    def test_bala_del_jugador_rompe_roca_y_suma_puntos(self):
+    def reset_score(self):
         score_config = ServiceLocator.constants_service.score_config
         ServiceLocator.game_state_service.load(ServiceLocator.configs_service.get(score_config))
+
+    def bullet(self, center):
+        return create_player_bullet(self.world, BULLET_INFO, pygame.Vector2(center), pygame.Vector2(1, 0))
+
+    def test_bala_del_jugador_rompe_roca_y_suma_puntos(self):
+        self.reset_score()
         rock = create_obstacle(self.world, OBSTACLES, ObstacleKind.ROCK, pygame.Vector2(100, 100), random.Random(0))
-        bullet = self.world.create_entity(CTransform(pygame.Vector2(99, 99)),
-                                          CSurface(pygame.Vector2(2, 2), pygame.Color(255, 255, 255)),
-                                          CTagPlayerBullet())
-        system_player_bullet_obstacle(self.world, OBSTACLES)
+        bullet = self.bullet((100, 100))
+        system_player_bullet_obstacle(self.world, OBSTACLES, WORLD)
         self.assertFalse(self.world.entity_exists(rock))
         self.assertFalse(self.world.entity_exists(bullet))
+        self.assertEqual(ServiceLocator.game_state_service.score, 10)
+
+    def test_roca_indestructible_absorbe_la_bala(self):
+        self.reset_score()
+        rock = create_obstacle(self.world, OBSTACLES, ObstacleKind.SOLID_ROCK, pygame.Vector2(100, 100),
+                               random.Random(0))
+        bullet = self.bullet((100, 100))
+        system_player_bullet_obstacle(self.world, OBSTACLES, WORLD)
+        self.assertTrue(self.world.entity_exists(rock))
+        self.assertFalse(self.world.entity_exists(bullet))
+        self.assertEqual(ServiceLocator.game_state_service.score, 0)
+
+    def test_bala_rompe_roca_cruzando_el_borde_del_mundo(self):
+        """Roca partida por el borde izquierdo y bala que llega por el derecho: en pantalla se tocan."""
+        self.reset_score()
+        rock = create_obstacle(self.world, OBSTACLES, ObstacleKind.ROCK, pygame.Vector2(2, 100), random.Random(0))
+        bullet = self.bullet((WORLD.x - 2, 100))
+        system_player_bullet_obstacle(self.world, OBSTACLES, WORLD)
+        self.assertFalse(self.world.entity_exists(rock))
+        self.assertFalse(self.world.entity_exists(bullet))
+
+    def test_bala_que_roza_el_sprite_pero_no_la_hitbox_no_choca(self):
+        rock = create_obstacle(self.world, OBSTACLES, ObstacleKind.ROCK, pygame.Vector2(100, 100), random.Random(0))
+        c_t = self.world.component_for_entity(rock, CTransform)
+        # Centro de la bala (3x3) justo en la esquina del sprite: toca el sprite, no la caja recortada.
+        bullet = self.bullet(c_t.pos)
+        system_player_bullet_obstacle(self.world, OBSTACLES, WORLD)
+        self.assertTrue(self.world.entity_exists(rock))
+        self.assertTrue(self.world.entity_exists(bullet))
+
+    def test_una_bala_no_rompe_dos_rocas(self):
+        self.reset_score()
+        rocks = [create_obstacle(self.world, OBSTACLES, ObstacleKind.ROCK, pygame.Vector2(x, 100), random.Random(0))
+                 for x in (98, 102)]
+        self.bullet((100, 100))
+        system_player_bullet_obstacle(self.world, OBSTACLES, WORLD)
+        self.assertEqual(sum(self.world.entity_exists(r) for r in rocks), 1)
         self.assertEqual(ServiceLocator.game_state_service.score, 10)
 
 

@@ -5,19 +5,17 @@ import pygame
 from src.create.prefab_obstacle import create_mine_blast
 from src.ecs.components.c_animation import CAnimation
 from src.ecs.components.c_enemy import CEnemy
+from src.ecs.components.c_hitbox import CollisionLayer
 from src.ecs.components.c_mine_blast import CMineBlast
 from src.ecs.components.c_obstacle import CObstacle, ObstacleKind
 from src.ecs.components.c_surface import CSurface
 from src.ecs.components.c_transform import CTransform
-from src.ecs.components.tags.c_tag_player_bullet import CTagPlayerBullet
+from src.ecs.systems.s_collision import system_collision
 from src.engine.service_locator import ServiceLocator
 from src.utils.wrap import wrapped_delta
 
 
-def obstacle_hitbox(c_t: CTransform, c_s: CSurface, c_obs: CObstacle) -> pygame.Rect:
-    """Rectángulo de choque: el sprite recortado hitbox_margin píxeles por lado."""
-    rect = pygame.Rect(c_t.pos, c_s.area.size)
-    return rect.inflate(-2 * c_obs.hitbox_margin, -2 * c_obs.hitbox_margin)
+BULLET_OBSTACLE_PAIR = (CollisionLayer.PLAYER_BULLET, CollisionLayer.OBSTACLE)
 
 
 def hit_obstacle(world: esper.World, obstacle: int, obstacles_info: dict) -> int:
@@ -38,22 +36,20 @@ def hit_obstacle(world: esper.World, obstacle: int, obstacles_info: dict) -> int
     return c_obs.points
 
 
-def system_player_bullet_obstacle(world: esper.World, obstacles_info: dict) -> None:
+def system_player_bullet_obstacle(world: esper.World, obstacles_info: dict,
+                                  world_size: pygame.Vector2 | None = None) -> None:
     """Una bala del jugador que toca un obstáculo se borra (la absorbe incluso una roca
     indestructible) y el obstáculo reacciona según su tipo. Los puntos van al puntaje.
 
-    Sin wrapped_delta: las balas mueren al salir de la cámara, así que nunca comparan
-    posiciones a lados opuestos del borde del mundo.
+    Se comparan las hitbox (capas PLAYER_BULLET y OBSTACLE), no los sprites, y con
+    world_size también cruzando los bordes del mundo: un obstáculo puede quedar partido
+    por un borde y la bala llegarle desde el otro lado.
     """
-    bullets = [(bullet, pygame.Rect(c_t.pos, c_s.area.size))
-               for bullet, (c_t, c_s, _) in world.get_components(CTransform, CSurface, CTagPlayerBullet)]
-    for obstacle, (c_t, c_s, c_obs) in world.get_components(CTransform, CSurface, CObstacle):
-        hitbox = obstacle_hitbox(c_t, c_s, c_obs)
-        for bullet, bullet_rect in bullets:
-            if world.entity_exists(bullet) and hitbox.colliderect(bullet_rect):
-                world.delete_entity(bullet)
-                ServiceLocator.game_state_service.add_score(hit_obstacle(world, obstacle, obstacles_info))
-                break
+    for bullet, obstacle in system_collision(world, [BULLET_OBSTACLE_PAIR], world_size)[BULLET_OBSTACLE_PAIR]:
+        # Una bala ya gastada no rompe otro obstáculo, ni un obstáculo roto absorbe otra bala.
+        if world.entity_exists(bullet) and world.entity_exists(obstacle):
+            world.delete_entity(bullet)
+            ServiceLocator.game_state_service.add_score(hit_obstacle(world, obstacle, obstacles_info))
 
 
 def system_mine_blast(world: esper.World, world_size: pygame.Vector2,

@@ -5,6 +5,7 @@ import esper
 import pygame
 
 from src.ecs.components.c_animation import CAnimation
+from src.ecs.components.c_hitbox import CHitBox, CollisionLayer
 from src.ecs.components.c_mine_blast import CMineBlast
 from src.ecs.components.c_obstacle import CObstacle, ObstacleKind
 from src.ecs.components.c_surface import CSurface
@@ -20,18 +21,24 @@ def create_obstacle(world: esper.World, obstacles_info: dict, kind: ObstacleKind
 
     rng es el azar del nivel (con su semilla), para que la imagen elegida también salga
     siempre igual en ese nivel.
+
+    La hitbox (capa OBSTACLE) es el sprite recortado "hitbox_margin" píxeles por cada lado.
+    Es un margen y no un tamaño fijo porque las imágenes de un mismo tipo miden distinto.
     """
     info = obstacles_info[kind.value]
     image = ServiceLocator.images_service.get(rng.choice(info["images"]))
     c_s = CSurface.from_surface(image)
-    entity = world.create_entity(c_s, CObstacle(kind, info["destructible"], info["points"],
-                                                info["hitbox_margin"]))
+    entity = world.create_entity(c_s, CObstacle(kind, info["destructible"], info["points"]))
     if "animation" in info:
         anim = info["animation"]
         c_anim = CAnimation(anim["number_frames"], anim["framerate"])
         set_frame(c_s, c_anim)
         world.add_component(entity, c_anim)
-    world.add_component(entity, CTransform(center - pygame.Vector2(c_s.area.size) / 2))
+    # Después de set_frame: el tamaño del sprite es el de un cuadro, no el de la tira completa.
+    sprite_size = pygame.Vector2(c_s.area.size)
+    margin = pygame.Vector2(info["hitbox_margin"], info["hitbox_margin"])
+    world.add_component(entity, CHitBox(sprite_size - 2 * margin, margin, CollisionLayer.OBSTACLE))
+    world.add_component(entity, CTransform(center - sprite_size / 2))
     return entity
 
 

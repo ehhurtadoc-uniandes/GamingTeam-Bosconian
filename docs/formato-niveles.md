@@ -25,7 +25,7 @@ hoy 1024 x 1536) y son el **centro** de lo que se crea.
 | Clave | Obligatoria | Qué es |
 |---|---|---|
 | `player_start` | no | Dónde empieza el jugador. Si falta, en el centro de la pantalla. |
-| `bases` | sí | Lista de bases: centro (`pos`) y `orientation` (`horizontal` o `vertical`). La usa `create_bases`. |
+| `bases` | no | Lista de bases (sin la clave, el nivel no tiene bases): centro (`pos`) y `orientation` (`horizontal` o `vertical`). La usa `create_bases`. |
 | `spawner` | sí | Cómo aparecen los enemigos del nivel (lo usa `create_enemy_spawner`). |
 | `obstacles` | no | Cuántos obstáculos de cada tipo se reparten al azar por el mundo. |
 | `obstacles.seed` | no | Semilla del azar: con la misma semilla el nivel siempre sale igual. |

@@ -32,6 +32,16 @@ class TestMinimap(unittest.TestCase):
     def test_escala_el_mundo_al_minimapa(self):
         self.assertEqual(to_minimap(pygame.Vector2(512, 768), WORLD, (64, 96)), pygame.Vector2(32, 48))
 
+    def test_posicion_pasada_del_borde_sale_por_el_otro_lado(self):
+        self.assertEqual(to_minimap(pygame.Vector2(1024 + 16, -16), WORLD, (64, 96)), pygame.Vector2(1, 95))
+
+    def test_jugador_en_el_borde_se_ve_completo(self):
+        """pos.x cerca del borde derecho: el centro se pasa del mundo y el punto sale a la izquierda."""
+        self.add((1028, 768), CTagPlayer())
+        system_minimap(self.world, 0.0, WORLD)
+        white = sum(self.surface().get_at((x, y))[:3] == (255, 255, 255) for x in range(64) for y in range(96))
+        self.assertEqual(white, INFO["dot_size"] ** 2)
+
     def test_dibuja_bases_y_jugador(self):
         self.add((512, 768), CTagBase())
         self.add((0, 0), CTagPlayer())

@@ -7,11 +7,17 @@ from src.ecs.components.c_surface import CSurface
 from src.ecs.components.c_transform import CTransform
 from src.ecs.components.tags.c_tag_base import CTagBase
 from src.ecs.components.tags.c_tag_player import CTagPlayer
+from src.utils.wrap import wrap_position
 
 
 def to_minimap(world_pos: pygame.Vector2, world_size: pygame.Vector2, size: tuple[int, int]) -> pygame.Vector2:
-    """Escala una posición del mundo al tamaño del minimapa (relativa a su esquina)."""
-    return pygame.Vector2(world_pos.x * size[0] / world_size.x, world_pos.y * size[1] / world_size.y)
+    """Escala una posición del mundo al tamaño del minimapa (relativa a su esquina).
+
+    Una posición que se pasó de un borde del mundo aparece por el lado opuesto (LC-MIN-02).
+    """
+    pos = pygame.Vector2(world_pos)
+    wrap_position(pos, world_size)
+    return pygame.Vector2(pos.x * size[0] / world_size.x, pos.y * size[1] / world_size.y)
 
 
 def system_minimap(world: esper.World, delta_time: float, world_size: pygame.Vector2) -> None:
