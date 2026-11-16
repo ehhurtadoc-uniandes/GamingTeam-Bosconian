@@ -16,7 +16,8 @@ from src.create.prefab_text import create_interface_text
 from src.ecs.components.c_input_command import CInputCommand, CommandPhase
 from src.ecs.components.c_surface import CSurface
 from src.ecs.components.c_transform import CTransform
-from src.ecs.components.c_enemy import EnemyType
+from src.create.prefab_explosion import create_explosion_for, destroy_with_explosion
+from src.ecs.components.c_enemy import CEnemy, EnemyType
 from src.ecs.systems.s_animation import system_animation
 from src.ecs.systems.s_camera import get_camera, system_camera, view_top_left
 from src.ecs.systems.s_debug_hitboxes import system_debug_hitboxes
@@ -24,6 +25,7 @@ from src.ecs.systems.s_debug_labels import system_enemy_labels
 from src.ecs.systems.s_enemy_bullet_collision import system_enemy_bullet_collision
 from src.ecs.systems.s_enemy_spawner import system_enemy_spawner
 from src.ecs.systems.s_enemy_state import system_enemy_state
+from src.ecs.systems.s_explosion_burst import system_explosion_burst
 from src.ecs.systems.s_lifetime import system_lifetime
 from src.ecs.systems.s_lives_hud import system_lives_hud
 from src.ecs.systems.s_minimap import system_minimap
@@ -173,6 +175,7 @@ class PlayScene(Scene):
         player_center = player_pos + pygame.Vector2(player_size) / 2
         system_camera(self.ecs_world, player_center)
         system_starfield(self.ecs_world, delta_time, get_camera(self.ecs_world), self._stars_info["blink"])
+        system_explosion_burst(self.ecs_world, delta_time)
         system_lifetime(self.ecs_world, delta_time)
         # "Salir de la pantalla" es salir de lo que ve la cámara (el área de juego), no de la ventana.
         system_offscreen_despawn(self.ecs_world, camera=get_camera(self.ecs_world))
@@ -227,6 +230,11 @@ class PlayScene(Scene):
         elif action.name == constants.debug_hitboxes_command:
             if action.phase == CommandPhase.START and self._debug_info["enabled"]:
                 self._show_hitboxes = not self._show_hitboxes
+        elif action.name == constants.debug_explode_command:
+            if action.phase == CommandPhase.START and self._debug_info["enabled"]:
+                create_explosion_for(self.ecs_world, self._player_entity)
+                for enemy, _ in self.ecs_world.get_component(CEnemy):
+                    destroy_with_explosion(self.ecs_world, enemy)
         elif action.name in constants.debug_spawn_commands:
             if action.phase == CommandPhase.START and self._debug_info["enabled"]:
                 self._spawn_debug_enemy(EnemyType(constants.debug_spawn_commands[action.name]))
