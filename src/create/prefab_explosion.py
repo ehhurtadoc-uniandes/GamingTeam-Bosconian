@@ -1,3 +1,4 @@
+import json
 import math
 import random
 
@@ -11,39 +12,45 @@ from src.ecs.components.c_surface import CSurface
 from src.ecs.components.c_transform import CTransform
 from src.ecs.components.c_velocity import CVelocity
 from src.ecs.components.tags.c_tag_player import CTagPlayer
+from src.ecs.systems.s_animation import set_frame
 from src.engine.service_locator import ServiceLocator
 
 
-def build_frames(explosion_info: dict) -> list[pygame.Surface]:
+def build_strip(explosion_info: dict) -> tuple[pygame.Surface, int]:
     width = explosion_info["size"]["w"]
     height = explosion_info["size"]["h"]
     if "image" in explosion_info:
         sheet = ServiceLocator.images_service.get(explosion_info["image"])
-        return [sheet.subsurface(pygame.Rect(i * width, 0, width, height))
-                for i in range(sheet.get_width() // width)]
-    frames = []
-    for frame_info in explosion_info["frames"]:
-        frame = pygame.Surface((width, height), pygame.SRCALPHA)
-        side = frame_info["size"]
-        color = frame_info["color"]
-        rect = pygame.Rect(0, 0, side["w"], side["h"])
-        rect.center = (width // 2, height // 2)
-        frame.fill((color["r"], color["g"], color["b"]), rect)
-        frames.append(frame)
-    return frames
+        return sheet, sheet.get_width() // width
+    frames_info = explosion_info["frames"]
+
+    def draw_strip() -> pygame.Surface:
+        strip = pygame.Surface((width * len(frames_info), height), pygame.SRCALPHA)
+        for index, frame_info in enumerate(frames_info):
+            side = frame_info["size"]
+            color = frame_info["color"]
+            rect = pygame.Rect(0, 0, side["w"], side["h"])
+            rect.center = (index * width + width // 2, height // 2)
+            strip.fill((color["r"], color["g"], color["b"]), rect)
+        return strip
+
+    key = json.dumps(explosion_info, sort_keys=True)
+    return ServiceLocator.images_service.get_or_create(key, draw_strip), len(frames_info)
 
 
 def create_explosion(world: esper.World, explosion_info: dict, center: pygame.Vector2,
                      velocity: pygame.Vector2) -> int:
-    frames = build_frames(explosion_info)
-    animation = CAnimation(frames, explosion_info["frame_duration"])
-    surface = CSurface.from_surface(frames[0])
+    strip, number_frames = build_strip(explosion_info)
+    framerate = explosion_info["framerate"]
+    animation = CAnimation(number_frames, framerate, loop=False)
+    surface = CSurface.from_surface(strip)
+    set_frame(surface, animation)
     explosion = world.create_entity()
     world.add_component(explosion, CTransform(pygame.Vector2(center) - pygame.Vector2(surface.area.size) / 2))
     world.add_component(explosion, CVelocity(pygame.Vector2(velocity)))
     world.add_component(explosion, surface)
     world.add_component(explosion, animation)
-    world.add_component(explosion, CLifetime(animation.total_duration))
+    world.add_component(explosion, CLifetime(number_frames / framerate))
     return explosion
 
 

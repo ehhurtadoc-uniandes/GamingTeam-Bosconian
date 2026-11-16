@@ -1,3 +1,4 @@
+"""Dibujo de depuración de las hitbox."""
 import esper
 import pygame
 
@@ -9,6 +10,11 @@ from src.ecs.systems.s_camera import world_to_screen
 
 def system_debug_hitboxes(world: esper.World, screen: pygame.Surface, color: pygame.Color,
                           camera: CCamera | None = None) -> None:
+    """Dibuja el borde de cada hitbox, para comparar la caja de colisión con el sprite.
+
+    Con camera, las cajas siguen a las entidades en pantalla y no se dibujan fuera
+    del área de juego.
+    """
     if camera is not None:
         screen.set_clip(camera.viewport)
     c_t: CTransform
