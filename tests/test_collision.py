@@ -15,6 +15,7 @@ from src.create.prefab_hitbox import add_hitbox
 from src.create.prefab_player import create_player
 from src.create.prefab_player_bullet import create_player_bullet
 from src.ecs.components.c_base import BaseOrientation, CBase
+from src.ecs.components.c_camera import CCamera
 from src.ecs.components.c_enemy import EnemyType
 from src.ecs.components.c_hitbox import CHitBox, CollisionLayer
 from src.ecs.components.c_surface import CSurface
@@ -261,10 +262,18 @@ class TestHitboxEnPlayScene(unittest.TestCase):
 
     def test_dibujo_de_hitbox_se_recorta_al_area_de_juego(self):
         screen = pygame.Surface((256, 208))
+        white = pygame.Color(255, 255, 255)
+        # El área de juego va de 16 a 116; su centro (66, 66) muestra el punto (500, 500) del mundo.
+        camera = CCamera(pygame.Rect(16, 16, 100, 100), V(1000, 1000), V(500, 500))
         world = esper.World()
-        add_box(world, (-50, -50), (20, 20), L.ENEMY)
-        system_debug_hitboxes(world, screen, pygame.Color(255, 255, 255))
-        self.assertEqual(screen.get_at((0, 0)), (0, 0, 0))
+        # En pantalla la caja va de x=6 a x=26: cruza el borde izquierdo del área de juego.
+        add_box(world, (440, 490), (20, 20), L.ENEMY)
+        system_debug_hitboxes(world, screen, white, camera)
+        self.assertEqual(screen.get_at((20, 56)), white)
+        self.assertEqual(screen.get_at((10, 56)), (0, 0, 0))
+        self.assertEqual(screen.get_at((6, 60)), (0, 0, 0))
+        # El recorte no queda puesto para lo que se dibuje después (el HUD).
+        self.assertEqual(screen.get_clip(), screen.get_rect())
 
 
 if __name__ == "__main__":
