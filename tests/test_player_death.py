@@ -11,16 +11,19 @@ import pygame
 from src.create.prefab_bullet import create_turret_bullet
 from src.create.prefab_enemy import create_enemy
 from src.create.prefab_explosion import create_explosion_for
+from src.create.prefab_obstacle import create_mine_blast
 from src.create.prefab_player import create_player
 from src.create.prefab_player_bullet import create_player_bullet
 from src.ecs.components.c_animation import CAnimation
 from src.ecs.components.c_enemy import EnemyType
 from src.ecs.components.c_explosion_burst import CExplosionBurst
 from src.ecs.components.c_hitbox import CollisionLayer
+from src.ecs.components.c_obstacle import CObstacle
 from src.ecs.components.c_player_dead import CPlayerDead
 from src.ecs.components.c_player_invulnerable import CPlayerInvulnerable
 from src.ecs.components.c_player_movement import CPlayerMovement
 from src.ecs.components.c_player_weapon import CPlayerWeapon
+from src.ecs.components.c_surface import CSurface
 from src.ecs.components.c_transform import CTransform
 from src.ecs.components.c_velocity import CVelocity
 from src.ecs.components.tags.c_tag_hidden import CTagHidden
@@ -225,8 +228,12 @@ class TestMuerteEnPlayScene(unittest.TestCase):
         self.scene = self.engine._scenes["play"]
         self.scene.start()
         self.world = self.scene.ecs_world
+        for obstacle, _ in self.world.get_component(CObstacle):
+            self.world.delete_entity(obstacle)
+        self.world._clear_dead_entities()
         self.world.component_for_entity(self.scene._player_entity, CTransform).pos = V(600, 600)
         self.respawn = self.scene._respawn_info
+        self.constants = ServiceLocator.constants_service
 
     def run_scene(self, seconds):
         for _ in range(int(seconds * 60)):
@@ -262,6 +269,40 @@ class TestMuerteEnPlayScene(unittest.TestCase):
         self.assertIsNone(self.engine._scene_name_to_switch)
         self.run_scene(0.4)
         self.assertEqual(self.engine._scene_name_to_switch, "defeat")
+
+    def blast_info(self):
+        obstacles = ServiceLocator.configs_service.get(self.constants.obstacles_config)
+        return obstacles["mine"]["blast"]
+
+    def player_center(self):
+        player = self.scene._player_entity
+        return (self.world.component_for_entity(player, CTransform).pos
+                + V(self.world.component_for_entity(player, CSurface).area.size) / 2)
+
+    def test_la_explosion_de_una_mina_mata_al_jugador(self):
+        create_mine_blast(self.world, self.blast_info(), self.player_center())
+        self.scene.simulate(1 / 60)
+        self.assertTrue(self.world.has_component(self.scene._player_entity, CPlayerDead))
+        self.assertEqual(ServiceLocator.game_state_service.lives, 2)
+
+    def test_una_explosion_lejana_no_mata_al_jugador(self):
+        create_mine_blast(self.world, self.blast_info(), self.player_center() + V(200, 0))
+        self.scene.simulate(1 / 60)
+        self.assertFalse(self.world.has_component(self.scene._player_entity, CPlayerDead))
+
+    def test_la_explosion_de_una_mina_no_mata_al_jugador_invulnerable(self):
+        self.scene.process_events(key_event(pygame.KEYDOWN, pygame.K_l))
+        self.run_scene(self.respawn["delay"] + 0.2)
+        lives = ServiceLocator.game_state_service.lives
+        create_mine_blast(self.world, self.blast_info(), self.player_center())
+        self.scene.simulate(1 / 60)
+        self.assertEqual(ServiceLocator.game_state_service.lives, lives)
+
+    def test_una_explosion_larga_no_resta_mas_de_una_vida(self):
+        create_mine_blast(self.world, self.blast_info(), self.player_center())
+        for _ in range(30):
+            self.scene.simulate(1 / 60)
+        self.assertEqual(ServiceLocator.game_state_service.lives, 2)
 
     def test_en_pausa_el_retraso_no_corre(self):
         self.scene.process_events(key_event(pygame.KEYDOWN, pygame.K_l))

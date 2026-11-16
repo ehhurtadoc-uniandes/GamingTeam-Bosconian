@@ -11,7 +11,7 @@ import pygame
 
 from src.create.prefab_bullet import create_turret_bullet
 from src.create.prefab_enemy import create_enemy
-from src.create.prefab_explosion import (build_frames, create_explosion, create_explosion_burst,
+from src.create.prefab_explosion import (build_strip, create_explosion, create_explosion_burst,
                                          create_explosion_for, destroy_with_explosion)
 from src.create.prefab_player import create_player
 from src.ecs.components.c_animation import CAnimation
@@ -36,7 +36,7 @@ V = pygame.Vector2
 
 EXPLOSION_INFO = {
     "size": {"w": 10, "h": 10},
-    "frame_duration": 0.1,
+    "framerate": 10,
     "frames": [
         {"size": {"w": 2, "h": 2}, "color": {"r": 255, "g": 0, "b": 0}},
         {"size": {"w": 6, "h": 6}, "color": {"r": 0, "g": 255, "b": 0}},
@@ -47,30 +47,49 @@ BURST_INFO = {"count": 5, "radius": 10, "time_spread": 0.5}
 
 
 def explosions(world):
-    return [e for e, _ in world.get_component(CAnimation) if world.entity_exists(e)]
+    return [e for e, _ in world.get_components(CAnimation, CLifetime) if world.entity_exists(e)]
 
 
 def real_configs():
     return ServiceLocator.configs_service.get(ServiceLocator.constants_service.explosions_config)
 
 
-class TestFrames(unittest.TestCase):
-    def test_un_cuadro_por_entrada_con_el_tamano_configurado(self):
-        frames = build_frames(EXPLOSION_INFO)
-        self.assertEqual(len(frames), 3)
-        for frame in frames:
-            self.assertEqual(frame.get_size(), (10, 10))
+class TestStrip(unittest.TestCase):
+    def test_una_tira_con_un_cuadro_por_entrada(self):
+        strip, number_frames = build_strip(EXPLOSION_INFO)
+        self.assertEqual(number_frames, 3)
+        self.assertEqual(strip.get_size(), (30, 10))
 
-    def test_cada_cuadro_se_dibuja_centrado(self):
-        frame = build_frames(EXPLOSION_INFO)[0]
-        self.assertEqual(frame.get_at((5, 5)), (255, 0, 0, 255))
-        self.assertEqual(frame.get_at((0, 0)).a, 0)
+    def test_cada_cuadro_se_dibuja_centrado_en_su_celda(self):
+        strip, _ = build_strip(EXPLOSION_INFO)
+        self.assertEqual(strip.get_at((5, 5)), (255, 0, 0, 255))
+        self.assertEqual(strip.get_at((15, 5)), (0, 255, 0, 255))
+        self.assertEqual(strip.get_at((0, 0)).a, 0)
 
-    def test_hoja_de_sprites_se_corta_en_cuadros(self):
+    def test_la_tira_se_crea_una_sola_vez_por_configuracion(self):
+        first, _ = build_strip(EXPLOSION_INFO)
+        second, _ = build_strip(dict(EXPLOSION_INFO))
+        self.assertIs(first, second)
+
+    def test_otra_configuracion_da_otra_tira(self):
+        first, _ = build_strip(EXPLOSION_INFO)
+        other, _ = build_strip(dict(EXPLOSION_INFO, size={"w": 12, "h": 12}))
+        self.assertIsNot(first, other)
+
+    def test_varias_explosiones_comparten_la_misma_superficie(self):
+        world = esper.World()
+        a = create_explosion(world, EXPLOSION_INFO, V(0, 0), V(0, 0))
+        b = create_explosion(world, EXPLOSION_INFO, V(50, 0), V(0, 0))
+        self.assertIs(world.component_for_entity(a, CSurface).surf, world.component_for_entity(b, CSurface).surf)
+        self.assertIsNot(world.component_for_entity(a, CSurface).area, world.component_for_entity(b, CSurface).area)
+
+    def test_hoja_de_sprites_se_usa_como_tira(self):
         sheet = pygame.Surface((30, 10))
         info = {"size": {"w": 10, "h": 10}, "image": "explosion.png"}
         with mock.patch.object(ServiceLocator.images_service, "get", return_value=sheet):
-            self.assertEqual(len(build_frames(info)), 3)
+            strip, number_frames = build_strip(info)
+        self.assertIs(strip, sheet)
+        self.assertEqual(number_frames, 3)
 
 
 class TestExplosionSimple(unittest.TestCase):
@@ -96,18 +115,19 @@ class TestExplosionSimple(unittest.TestCase):
     def test_la_animacion_avanza_por_cuadros(self):
         explosion = create_explosion(self.world, EXPLOSION_INFO, V(0, 0), V(0, 0))
         c_s = self.world.component_for_entity(explosion, CSurface)
-        frames = self.world.component_for_entity(explosion, CAnimation).frames
-        self.assertIs(c_s.surf, frames[0])
+        self.assertEqual((c_s.area.x, c_s.area.w), (0, 10))
         system_animation(self.world, 0.11)
-        self.assertIs(c_s.surf, frames[1])
+        self.assertEqual((c_s.area.x, c_s.area.w), (10, 10))
         system_animation(self.world, 0.1)
-        self.assertIs(c_s.surf, frames[2])
+        self.assertEqual((c_s.area.x, c_s.area.w), (20, 10))
 
-    def test_se_queda_en_el_ultimo_cuadro(self):
+    def test_se_queda_en_el_ultimo_cuadro_y_no_se_repite(self):
         explosion = create_explosion(self.world, EXPLOSION_INFO, V(0, 0), V(0, 0))
         system_animation(self.world, 10.0)
-        c_s = self.world.component_for_entity(explosion, CSurface)
-        self.assertIs(c_s.surf, self.world.component_for_entity(explosion, CAnimation).frames[-1])
+        c_anim = self.world.component_for_entity(explosion, CAnimation)
+        self.assertEqual(c_anim.current_frame, 2)
+        self.assertTrue(c_anim.finished)
+        self.assertFalse(c_anim.loop)
 
     def test_desaparece_al_terminar_la_animacion(self):
         explosion = create_explosion(self.world, EXPLOSION_INFO, V(0, 0), V(0, 0))
@@ -216,8 +236,8 @@ class TestExplosionEnPlayScene(unittest.TestCase):
 
     def test_config_real_es_valida(self):
         info = real_configs()
-        self.assertGreater(info["explosion"]["frame_duration"], 0)
-        self.assertGreater(len(build_frames(info["explosion"])), 1)
+        self.assertGreater(info["explosion"]["framerate"], 0)
+        self.assertGreater(build_strip(info["explosion"])[1], 1)
         self.assertGreaterEqual(info["player_burst"]["count"], 2)
 
     def test_k_hace_explotar_al_jugador_y_a_los_enemigos(self):
@@ -243,10 +263,14 @@ class TestExplosionEnPlayScene(unittest.TestCase):
         self.scene.process_events(key_event(pygame.KEYDOWN, pygame.K_k))
         self.scene.simulate(1 / 60)
         self.scene.toggle_pause()
-        before = [world.component_for_entity(e, CAnimation).elapsed for e in explosions(world)]
+        def progress():
+            return [(world.component_for_entity(e, CAnimation).current_frame,
+                     world.component_for_entity(e, CAnimation).time_left) for e in explosions(world)]
+
+        before = progress()
         for _ in range(60):
             self.scene.simulate(1 / 60)
-        after = [world.component_for_entity(e, CAnimation).elapsed for e in explosions(world)]
+        after = progress()
         self.assertEqual(before, after)
 
 
