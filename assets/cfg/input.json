@@ -15,5 +15,6 @@
   "DEBUG_SPAWN_I": ["1", "[1]"],
   "DEBUG_SPAWN_P": ["2", "[2]"],
   "DEBUG_SPAWN_E": ["3", "[3]"],
-  "DEBUG_HITBOXES": ["h"]
+  "DEBUG_HITBOXES": ["h"],
+  "DEBUG_EXPLODE": ["k"]
 }
