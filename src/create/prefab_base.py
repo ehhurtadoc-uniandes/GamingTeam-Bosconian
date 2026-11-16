@@ -4,7 +4,9 @@ import random
 import esper
 import pygame
 
+from src.create.prefab_hitbox import add_hitbox
 from src.ecs.components.c_base import BaseOrientation, CBase
+from src.ecs.components.c_hitbox import CollisionLayer
 from src.ecs.components.c_surface import CSurface
 from src.ecs.components.c_transform import CTransform
 from src.ecs.components.c_turret import CTurret
@@ -59,14 +61,15 @@ def create_base(world: esper.World, base_info: dict, center: pygame.Vector2,
 
     # El cuerpo se crea primero para que se dibuje debajo de las piezas.
     base = world.create_entity()
-    _add_piece(world, base, base_info["body"], center, pygame.Vector2(0, 0), orientation)
+    _add_piece(world, base, base_info["body"], center, pygame.Vector2(0, 0), orientation,
+               CollisionLayer.BASE)
     world.add_component(base, CTagBase())
 
     turrets = []
     for offset in offsets:
         turret = world.create_entity()
         _add_piece(world, turret, base_info["turret"], center,
-                   pygame.Vector2(offset["x"], offset["y"]), orientation)
+                   pygame.Vector2(offset["x"], offset["y"]), orientation, CollisionLayer.BASE_TURRET)
         world.add_component(turret, CTagBaseTurret())
         world.add_component(turret, _turret_state(world, turret, base_info["turret"], orientation))
         turrets.append(turret)
@@ -75,7 +78,7 @@ def create_base(world: esper.World, base_info: dict, center: pygame.Vector2,
     core = world.create_entity()
     core_offset = core_info.get("offset", {"x": 0, "y": 0})
     _add_piece(world, core, core_info, center,
-               pygame.Vector2(core_offset["x"], core_offset["y"]), orientation)
+               pygame.Vector2(core_offset["x"], core_offset["y"]), orientation, CollisionLayer.BASE_CORE)
     world.add_component(core, CTagBaseCore())
 
     world.add_component(base, CBase(orientation, turrets, core))
@@ -106,7 +109,7 @@ def _turret_state(world: esper.World, turret: int, turret_info: dict,
 
 
 def _add_piece(world: esper.World, entity: int, piece_info: dict, center: pygame.Vector2,
-               offset: pygame.Vector2, orientation: BaseOrientation) -> None:
+               offset: pygame.Vector2, orientation: BaseOrientation, layer: CollisionLayer) -> None:
     """Agrega CSurface y CTransform a una pieza, rotada según la orientación.
 
     Si piece_info trae "image" se usa ese sprite; si no, un rectángulo del color
@@ -117,6 +120,7 @@ def _add_piece(world: esper.World, entity: int, piece_info: dict, center: pygame
     pos = center + rotate_offset(offset, orientation) - pygame.Vector2(surface.area.size) / 2
     world.add_component(entity, CTransform(pos))
     world.add_component(entity, surface)
+    add_hitbox(world, entity, piece_info, layer, rotated=orientation == BaseOrientation.VERTICAL)
 
 
 def _piece_surface(piece_info: dict, orientation: BaseOrientation) -> CSurface:

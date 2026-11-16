@@ -2,6 +2,8 @@
 import esper
 import pygame
 
+from src.create.prefab_hitbox import add_hitbox
+from src.ecs.components.c_hitbox import CollisionLayer
 from src.ecs.components.c_lifetime import CLifetime
 from src.ecs.components.c_surface import CSurface
 from src.ecs.components.c_transform import CTransform
@@ -35,6 +37,7 @@ def create_turret_bullet(world: esper.World, bullet_info: dict, center: pygame.V
     world.add_component(bullet, surface)
     # Se borra al salir del área de juego o al cumplir su tiempo, lo que pase primero.
     world.add_component(bullet, CLifetime(bullet_info["lifetime"]))
+    add_hitbox(world, bullet, bullet_info, CollisionLayer.ENEMY_BULLET)
     world.add_component(bullet, CTagOffscreenDespawn())
     world.add_component(bullet, CTagEnemyBullet())
     return bullet

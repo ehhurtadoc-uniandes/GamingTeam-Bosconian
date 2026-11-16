@@ -2,7 +2,9 @@
 import esper
 import pygame
 
+from src.create.prefab_hitbox import add_hitbox
 from src.create.prefab_square import create_square
+from src.ecs.components.c_hitbox import CollisionLayer
 from src.ecs.components.c_enemy_state import CEnemyState, EnemyState
 from src.ecs.components.c_steering import CSteering
 from src.ecs.components.c_enemy import CEnemy, EnemyType
@@ -21,6 +23,7 @@ def create_enemy(world: esper.World, enemies_info: dict, pos: pygame.Vector2,
     states_info = _scale_wander(info["states"], wander_scale)
 
     entity = create_square(world, info["size"], info["color"], pos)
+    add_hitbox(world, entity, info, CollisionLayer.ENEMY)
     world.add_component(entity, CSteering(info["steering"]))
     world.add_component(entity, CEnemyState(EnemyState(info["initial_state"]), info["steering"], states_info))
     world.add_component(entity, CEnemy(enemy_type, info["points"]))

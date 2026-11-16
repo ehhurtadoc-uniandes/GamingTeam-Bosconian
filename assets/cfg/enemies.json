@@ -2,6 +2,7 @@
   "I": {
     "size": { "w": 8, "h": 8 },
     "color": { "r": 255, "g": 80, "b": 80 },
+    "hitbox": { "size": { "w": 6, "h": 6 } },
     "points": 50,
     "initial_state": "CHASE",
     "steering": {
@@ -18,6 +19,7 @@
   "P": {
     "size": { "w": 8, "h": 8 },
     "color": { "r": 255, "g": 200, "b": 60 },
+    "hitbox": { "size": { "w": 6, "h": 6 } },
     "points": 60,
     "initial_state": "CHASE",
     "steering": {
@@ -34,6 +36,7 @@
   "E": {
     "size": { "w": 8, "h": 8 },
     "color": { "r": 120, "g": 255, "b": 120 },
+    "hitbox": { "size": { "w": 6, "h": 6 } },
     "points": 70,
     "initial_state": "AIM",
     "steering": {

@@ -6,11 +6,13 @@
   "core": {
     "size": { "w": 12, "h": 12 },
     "color": { "r": 255, "g": 60, "b": 160 },
+    "hitbox": { "size": { "w": 8, "h": 8 } },
     "offset": { "x": 0, "y": 0 }
   },
   "turret": {
     "size": { "w": 10, "h": 10 },
     "color": { "r": 200, "g": 220, "b": 200 },
+    "hitbox": { "size": { "w": 8, "h": 8 } },
     "open_color": { "r": 255, "g": 140, "b": 40 },
     "activation_distance": 90,
     "fire_interval": { "min": 1.2, "max": 2.4 }
