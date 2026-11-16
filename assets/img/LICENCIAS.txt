@@ -1,0 +1,3 @@
+Imágenes recortadas de naves.png (recursos del proyecto final, MISW4407).
+Creadas por Diana Pacheco. Licencia: CC-BY-4.0 (https://creativecommons.org/licenses/by/4.0/)
+Archivos: rock_1..3.png, solid_rock_1..3.png, mine.png, mine_blast.png
