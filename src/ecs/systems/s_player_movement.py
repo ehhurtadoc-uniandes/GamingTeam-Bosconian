@@ -1,6 +1,7 @@
 import esper
 import pygame
 
+from src.ecs.components.c_player_dead import CPlayerDead
 from src.ecs.components.c_player_movement import CPlayerMovement
 from src.ecs.components.c_velocity import CVelocity
 from src.ecs.components.tags.c_tag_player import CTagPlayer
@@ -33,6 +34,8 @@ def system_player_acceleration(world: esper.World, delta_time: float) -> None:
     components = world.get_components(CVelocity, CPlayerMovement, CTagPlayer)
     c_v: CVelocity
     c_pm: CPlayerMovement
-    for _, (c_v, c_pm, _) in components:
+    for entity, (c_v, c_pm, _) in components:
+        if world.has_component(entity, CPlayerDead):
+            continue
         c_pm.speed = min(c_pm.max_speed, c_pm.speed + c_pm.acceleration * delta_time)
         c_v.vel = c_pm.direction * c_pm.speed

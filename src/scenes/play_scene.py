@@ -29,6 +29,8 @@ from src.ecs.systems.s_lives_hud import system_lives_hud
 from src.ecs.systems.s_movement import system_movement
 from src.ecs.systems.s_offscreen_despawn import system_offscreen_despawn
 from src.ecs.systems.s_pause import system_pause_visibility
+from src.ecs.systems.s_player_death import (is_vulnerable, kill_player, system_player_death,
+                                           system_player_invulnerability, system_player_respawn)
 from src.ecs.systems.s_player_fire import system_player_fire, system_player_weapon_cooldown
 from src.ecs.systems.s_player_movement import system_player_acceleration, system_player_direction
 from src.ecs.systems.s_score import system_score_hud
@@ -87,6 +89,7 @@ class PlayScene(Scene):
         self._pause_text: int | None = None
         self._pause_info: dict = {}
         self._show_hitboxes = False
+        self._respawn_info: dict = {}
 
     def do_create(self) -> None:
         constants = ServiceLocator.constants_service
@@ -101,6 +104,7 @@ class PlayScene(Scene):
         self.world_size = world_size_from_config(world_info)
         self._create_level()
         player_info = ServiceLocator.configs_service.get(constants.player_config)
+        self._respawn_info = player_info["respawn"]
         size = player_info["size"]
         pos = pygame.Vector2(self.screen_rect.center) - pygame.Vector2(size["w"], size["h"]) / 2
         self._player_entity = create_player(self.ecs_world, player_info, pos)
@@ -133,6 +137,7 @@ class PlayScene(Scene):
             # En pausa nada se mueve; las estrellas siguen brillando quietas (LC-ESC-04.3.2).
             system_star_blink(self.ecs_world, delta_time, self._stars_info["blink"])
             return
+        constants = ServiceLocator.constants_service
         system_player_acceleration(self.ecs_world, delta_time)
         system_player_weapon_cooldown(self.ecs_world, delta_time)
         # Los enemigos persiguen la posición del jugador. El estado va antes que el
@@ -159,6 +164,10 @@ class PlayScene(Scene):
         # "Salir de la pantalla" es salir de lo que ve la cámara (el área de juego), no de la ventana.
         system_offscreen_despawn(self.ecs_world, camera=get_camera(self.ecs_world))
         system_enemy_bullet_collision(self.ecs_world, self.world_size)
+        system_player_death(self.ecs_world, self._respawn_info, self.world_size)
+        system_player_invulnerability(self.ecs_world, delta_time, self._respawn_info)
+        if system_player_respawn(self.ecs_world, delta_time, self._respawn_info):
+            self.switch_scene(constants.defeat_scene)
         # Al final, para que el HUD muestre los puntos sumados en este paso.
         system_score_hud(self.ecs_world)
         system_lives_hud(self.ecs_world)
@@ -208,6 +217,10 @@ class PlayScene(Scene):
                 create_explosion_for(self.ecs_world, self._player_entity)
                 for enemy, _ in self.ecs_world.get_component(CEnemy):
                     destroy_with_explosion(self.ecs_world, enemy)
+        elif action.name == constants.debug_kill_command:
+            if action.phase == CommandPhase.START and self._debug_info["enabled"]:
+                if is_vulnerable(self.ecs_world, self._player_entity):
+                    kill_player(self.ecs_world, self._player_entity, self._respawn_info)
         elif action.name in constants.debug_spawn_commands:
             if action.phase == CommandPhase.START and self._debug_info["enabled"]:
                 self._spawn_debug_enemy(EnemyType(constants.debug_spawn_commands[action.name]))
