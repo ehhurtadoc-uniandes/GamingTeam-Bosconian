@@ -25,6 +25,7 @@ class ConstantsService:
         self.instructions_config = "assets/cfg/instructions.json"
         self.credits_config = "assets/cfg/credits.json"
         self.pause_config = "assets/cfg/pause.json"
+        self.explosions_config = "assets/cfg/explosions.json"
 
         # Delta máximo de un frame, en segundos: dos frames a 60 FPS. Ver GameEngine._calculate_time.
         # Con más, una bala y un enemigo que van de frente (~100 px/s cada uno) podrían cruzarse
@@ -55,6 +56,7 @@ class ConstantsService:
         self.pause_command = "PAUSE"
         self.fire_command = "PLAYER_FIRE"
         self.debug_hitboxes_command = "DEBUG_HITBOXES"
+        self.debug_explode_command = "DEBUG_EXPLODE"
         # Con el modo de depuración, estas teclas crean enemigos (valor de EnemyType) a pedido,
         # además de los del spawner (#28).
         self.debug_spawn_commands = {
