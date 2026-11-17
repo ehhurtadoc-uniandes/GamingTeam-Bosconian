@@ -21,10 +21,12 @@ from src.ecs.components.tags.c_tag_hide_on_pause import CTagHideOnPause
 from src.ecs.components.tags.c_tag_player_bullet import CTagPlayerBullet
 from src.ecs.components.tags.c_tag_ui import CTagUI
 from src.ecs.systems.s_lifetime import system_lifetime
+from src.ecs.systems.s_player_death import kill_player, system_player_respawn
 from src.ecs.systems.s_player_fire import fan_directions, system_player_fire
 from src.engine.game_engine import GameEngine
 from src.engine.service_locator import ServiceLocator
 from tests.test_input import key_event
+from tests.test_player_death import RESPAWN, SPAWN, reset_game_state
 from tests.test_player_fire import PLAYER_INFO
 
 V = pygame.Vector2
@@ -122,6 +124,24 @@ class TestDisparoEspecial(unittest.TestCase):
         without = create_player(self.world, INFO, V(0, 0))
         self.assertIsNotNone(self.world.try_component(with_ability, CSpecialShot))
         self.assertIsNone(self.world.try_component(without, CSpecialShot))
+
+
+class TestHabilidadConMuerteYReaparicion(unittest.TestCase):
+    def setUp(self):
+        reset_game_state()
+        self.world = esper.World()
+        self.player = create_player(self.world, INFO, V(100, 100), special_shot=True)
+        kill_player(self.world, self.player, RESPAWN)
+
+    def test_muerto_no_dispara_aunque_tenga_la_habilidad(self):
+        system_player_fire(self.world)
+        self.assertEqual(bullet_velocities(self.world), [])
+
+    def test_al_reaparecer_conserva_la_habilidad(self):
+        system_player_respawn(self.world, RESPAWN["delay"] + 0.01, RESPAWN, SPAWN)
+        self.assertIsNotNone(self.world.try_component(self.player, CSpecialShot))
+        system_player_fire(self.world)
+        self.assertEqual(len(bullet_velocities(self.world)), 4)
 
 
 class TestMensajeDeHabilidad(unittest.TestCase):
