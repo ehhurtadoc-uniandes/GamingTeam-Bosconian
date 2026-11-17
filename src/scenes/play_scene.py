@@ -11,6 +11,7 @@ from src.create.prefab_hud import create_lives_hud, create_score_hud
 from src.create.prefab_minimap import create_minimap
 from src.create.prefab_obstacle import create_obstacles
 from src.create.prefab_player import create_player
+from src.create.prefab_special_message import create_special_shot_message
 from src.create.prefab_stars import create_starfield
 from src.create.prefab_text import create_interface_text
 from src.ecs.components.c_input_command import CInputCommand, CommandPhase
@@ -95,6 +96,7 @@ class PlayScene(Scene):
         self._pause_text: int | None = None
         self._pause_info: dict = {}
         self._show_hitboxes = False
+        self._has_special_shot = False
         self._respawn_info: dict = {}
         self._player_spawn_pos = pygame.Vector2(0, 0)
 
@@ -114,7 +116,9 @@ class PlayScene(Scene):
         size = player_info["size"]
         pos = self._player_start - pygame.Vector2(size["w"], size["h"]) / 2
         self._player_spawn_pos = pygame.Vector2(pos)
-        self._player_entity = create_player(self.ecs_world, player_info, pos)
+        self._player_entity = create_player(self.ecs_world, player_info, pos, self._has_special_shot)
+        if self._has_special_shot:
+            create_special_shot_message(self.ecs_world, player_info["special_shot"])
         player_center = pos + pygame.Vector2(size["w"], size["h"]) / 2
         create_camera(self.ecs_world, world_info["camera"], self.world_size, player_center)
         self._stars_info = ServiceLocator.configs_service.get(constants.stars_config)
@@ -133,6 +137,7 @@ class PlayScene(Scene):
         constants = ServiceLocator.constants_service
         level_path = ServiceLocator.configs_service.get(constants.levels_config)["levels"][self.level_index]
         level_info = ServiceLocator.configs_service.get(level_path)
+        self._has_special_shot = level_info.get("special", False)
         base_info = ServiceLocator.configs_service.get(constants.base_config)
         self._bullet_info = base_info["bullet"]
         self._enemies_info = ServiceLocator.configs_service.get(constants.enemies_config)

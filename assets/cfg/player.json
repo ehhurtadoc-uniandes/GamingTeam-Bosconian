@@ -17,5 +17,16 @@
       "color": { "r": 255, "g": 255, "b": 255 },
       "speed": 150
     }
+  },
+  "special_shot": {
+    "forward_bullets": 3,
+    "spread_degrees": 12,
+    "message_duration": 2.5,
+    "message": {
+      "text": "TRIPLE SHOT",
+      "anchor": { "x": 96, "y": 40 },
+      "alignment": "CENTER",
+      "color": { "r": 255, "g": 230, "b": 120 }
+    }
   }
 }

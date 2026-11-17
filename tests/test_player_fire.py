@@ -107,6 +107,12 @@ class TestDisparoEnPlayScene(unittest.TestCase):
         self.addCleanup(pygame.quit)
         self.addCleanup(ServiceLocator.fonts_service.clear)
         self.scene = self.engine._scenes["play"]
+        # Estas pruebas son del arma base: el nivel no da la habilidad especial, la dé o no el nivel real.
+        constants = ServiceLocator.constants_service
+        level_path = ServiceLocator.configs_service.get(constants.levels_config)["levels"][0]
+        level = ServiceLocator.configs_service.get(level_path)
+        self.addCleanup(level.update, dict(level))
+        level["special"] = False
         self.scene.start()
 
     def test_config_real_tiene_arma(self):

@@ -7,6 +7,7 @@ from src.ecs.components.c_directional_sprite import CDirectionalSprite
 from src.ecs.components.c_hitbox import CollisionLayer
 from src.ecs.components.c_player_movement import CPlayerMovement
 from src.ecs.components.c_player_weapon import CPlayerWeapon
+from src.ecs.components.c_special_shot import CSpecialShot
 from src.ecs.components.c_surface import CSurface
 from src.ecs.components.c_transform import CTransform
 from src.ecs.components.c_velocity import CVelocity
@@ -46,7 +47,8 @@ def get_directional_frames(image_path: str, canvas_size: tuple[int, int]) -> lis
             for i in range(SPRITE_DIRECTIONS)]
 
 
-def create_player(world: esper.World, player_info: dict, pos: pygame.Vector2) -> int:
+def create_player(world: esper.World, player_info: dict, pos: pygame.Vector2,
+                  special_shot: bool = False) -> int:
     movement = CPlayerMovement(player_info["movement"])
     size = player_info["size"]
     if "image" in player_info:
@@ -63,5 +65,7 @@ def create_player(world: esper.World, player_info: dict, pos: pygame.Vector2) ->
     add_hitbox(world, entity, player_info, CollisionLayer.PLAYER)
     world.add_component(entity, movement)
     world.add_component(entity, CPlayerWeapon(player_info["weapon"]))
+    if special_shot:
+        world.add_component(entity, CSpecialShot(player_info["special_shot"]))
     world.add_component(entity, CTagPlayer())
     return entity
