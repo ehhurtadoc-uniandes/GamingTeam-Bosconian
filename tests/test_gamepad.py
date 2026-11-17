@@ -14,7 +14,7 @@ from src.ecs.components.c_gamepad_binding import CGamepadBinding, GamepadSource
 from src.ecs.components.c_input_command import CInputCommand, CommandPhase
 from src.ecs.components.c_player_movement import CPlayerMovement
 from src.ecs.components.tags.c_tag_player_bullet import CTagPlayerBullet
-from src.ecs.systems.s_input import system_input
+from src.ecs.systems.s_input import reset_gamepad_commands, system_input
 from src.engine.game_engine import GameEngine
 from src.engine.service_locator import ServiceLocator
 from src.engine.services.gamepad_service import GamepadService
@@ -146,6 +146,20 @@ class TestTecladoYGamepad(InputHarness):
         self.assertTrue(any(k < 0 for k in keys))
 
 
+class TestReiniciarComandosDelGamepad(InputHarness):
+    def test_tras_reiniciar_el_mismo_lado_vuelve_a_dar_start(self):
+        self.send(axis(0, 1.0))
+        reset_gamepad_commands(self.world)
+        self.send(axis(0, 0.9))
+        self.assertEqual(self.actions, [("PLAYER_RIGHT", CommandPhase.START), ("PLAYER_RIGHT", CommandPhase.START)])
+
+    def test_no_toca_los_comandos_del_teclado(self):
+        self.send(key_event(pygame.KEYDOWN, pygame.K_z))
+        reset_gamepad_commands(self.world)
+        keyboard = [c for _, c in self.world.get_component(CInputCommand) if c.key == pygame.K_z]
+        self.assertEqual(keyboard[0].phase, CommandPhase.START)
+
+
 class TestCrearComandosDeGamepad(unittest.TestCase):
     def setUp(self):
         pygame.init()
@@ -222,6 +236,38 @@ class TestGamepadService(unittest.TestCase):
             self.service.handle_event(pygame.event.Event(pygame.JOYDEVICEADDED, device_index=0))
         self.assertEqual(self.service.count, 0)
 
+    def connect(self, *instance_ids):
+        for instance_id in instance_ids:
+            with mock.patch("pygame.joystick.Joystick", return_value=self.fake_joystick(instance_id)):
+                self.service.handle_event(pygame.event.Event(pygame.JOYDEVICEADDED, device_index=0))
+
+    def test_el_primero_que_se_conecta_es_el_activo(self):
+        self.connect(7, 8)
+        self.assertEqual(self.service.active, 7)
+
+    def test_solo_acepta_la_entrada_del_mando_activo(self):
+        self.connect(7, 8)
+        self.assertTrue(self.service.accepts(pygame.event.Event(pygame.JOYAXISMOTION, axis=0, value=1.0,
+                                                                instance_id=7)))
+        self.assertFalse(self.service.accepts(pygame.event.Event(pygame.JOYAXISMOTION, axis=0, value=0.0,
+                                                                 instance_id=8)))
+
+    def test_la_desconexion_de_otro_mando_no_llega_a_la_escena(self):
+        self.connect(7, 8)
+        self.assertFalse(self.service.accepts(pygame.event.Event(pygame.JOYDEVICEREMOVED, instance_id=8)))
+        self.assertTrue(self.service.accepts(pygame.event.Event(pygame.JOYDEVICEREMOVED, instance_id=7)))
+
+    def test_si_se_desconecta_el_activo_pasa_al_siguiente(self):
+        self.connect(7, 8)
+        self.service.handle_event(pygame.event.Event(pygame.JOYDEVICEREMOVED, instance_id=7))
+        self.assertEqual(self.service.active, 8)
+        self.service.handle_event(pygame.event.Event(pygame.JOYDEVICEREMOVED, instance_id=8))
+        self.assertIsNone(self.service.active)
+
+    def test_el_teclado_siempre_se_acepta(self):
+        self.connect(7)
+        self.assertTrue(self.service.accepts(key_event(pygame.KEYDOWN, pygame.K_z)))
+
     def test_eventos_que_no_son_de_dispositivos_se_ignoran(self):
         self.service.handle_event(button(pygame.JOYBUTTONDOWN, 0))
         self.assertEqual(self.service.count, 0)
@@ -297,6 +343,45 @@ class TestGamepadEnPlayScene(unittest.TestCase):
         self.scene.process_events(pygame.event.Event(pygame.JOYDEVICEREMOVED, instance_id=0))
         self.scene.process_events(key_event(pygame.KEYDOWN, pygame.K_UP))
         self.assertEqual(self.direction(), V(0, -1))
+
+    def test_desconectar_el_gamepad_conserva_las_flechas_del_teclado(self):
+        self.scene.process_events(key_event(pygame.KEYDOWN, pygame.K_UP))
+        self.scene.process_events(axis(0, 1.0))
+        self.scene.process_events(pygame.event.Event(pygame.JOYDEVICEREMOVED, instance_id=0))
+        self.assertEqual(self.direction(), V(0, -1))
+        self.scene.process_events(key_event(pygame.KEYDOWN, pygame.K_RIGHT))
+        self.assertEqual(self.direction(), V(1, -1).normalize())
+
+    def test_al_reconectar_el_stick_vuelve_a_mover_hacia_el_mismo_lado(self):
+        self.scene.process_events(axis(0, 1.0))
+        self.scene.process_events(pygame.event.Event(pygame.JOYDEVICEREMOVED, instance_id=0))
+        self.scene.process_events(key_event(pygame.KEYDOWN, pygame.K_UP))
+        self.scene.process_events(axis(0, 1.0))
+        self.assertEqual(self.direction(), V(1, -1).normalize())
+
+    def test_tras_perder_el_foco_el_stick_vuelve_a_mover_hacia_el_mismo_lado(self):
+        self.scene.process_events(axis(0, 1.0))
+        self.scene.process_events(pygame.event.Event(pygame.WINDOWFOCUSLOST))
+        self.scene.process_events(button(pygame.JOYBUTTONDOWN, 7))
+        self.scene.process_events(key_event(pygame.KEYDOWN, pygame.K_UP))
+        self.scene.process_events(axis(0, 1.0))
+        self.assertEqual(self.direction(), V(1, -1).normalize())
+
+    def test_el_motor_ignora_la_entrada_de_un_segundo_mando(self):
+        service = ServiceLocator.gamepad_service
+        self.addCleanup(service.clear)
+        service.clear()
+        for instance_id in (0, 1):
+            joystick = mock.Mock()
+            joystick.get_instance_id.return_value = instance_id
+            with mock.patch("pygame.joystick.Joystick", return_value=joystick):
+                service.handle_event(pygame.event.Event(pygame.JOYDEVICEADDED, device_index=0))
+        self.engine._current_scene = self.scene
+        events = [axis(0, 1.0), pygame.event.Event(pygame.JOYAXISMOTION, axis=0, value=0.0, instance_id=1),
+                  key_event(pygame.KEYDOWN, pygame.K_UP)]
+        with mock.patch("pygame.event.get", return_value=events):
+            self.engine._process_events()
+        self.assertEqual(self.direction(), V(1, -1).normalize())
 
     def test_el_juego_corre_y_dibuja_con_gamepad(self):
         self.scene.process_events(axis(1, -1.0))

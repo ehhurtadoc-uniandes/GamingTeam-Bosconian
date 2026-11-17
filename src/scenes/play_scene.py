@@ -22,6 +22,7 @@ from src.ecs.systems.s_animation import system_animation
 from src.ecs.systems.s_camera import get_camera, system_camera, view_top_left
 from src.ecs.systems.s_debug_hitboxes import system_debug_hitboxes
 from src.ecs.systems.s_debug_labels import system_enemy_labels
+from src.ecs.systems.s_input import reset_gamepad_commands
 from src.ecs.systems.s_enemy_bullet_collision import system_enemy_bullet_collision
 from src.ecs.systems.s_enemy_spawner import system_enemy_spawner
 from src.ecs.systems.s_enemy_state import system_enemy_state
@@ -219,8 +220,7 @@ class PlayScene(Scene):
                 self._held_direction_keys.add(held)
             else:
                 self._held_direction_keys.discard(held)
-            active = {name for name, _ in self._held_direction_keys}
-            system_player_direction(self.ecs_world, direction_from_commands(active))
+            self._update_player_direction()
         elif self.state == PlayState.PAUSED:
             # En pausa se ignora todo lo demás (disparo, depuración).
             return
@@ -239,6 +239,10 @@ class PlayScene(Scene):
             if action.phase == CommandPhase.START and self._debug_info["enabled"]:
                 self._spawn_debug_enemy(EnemyType(constants.debug_spawn_commands[action.name]))
 
+    def _update_player_direction(self) -> None:
+        active = {name for name, _ in self._held_direction_keys}
+        system_player_direction(self.ecs_world, direction_from_commands(active))
+
     def toggle_pause(self) -> None:
         """Pausa o reanuda (LC-ESC-04.3): esconde el mundo y el minimapa y muestra "JUEGO PAUSADO"."""
         if self.state == PlayState.PLAYING:
@@ -254,10 +258,15 @@ class PlayScene(Scene):
 
     def do_process_events(self, event: pygame.event.Event) -> None:
         if event.type == pygame.JOYDEVICEREMOVED:
-            self._held_direction_keys.clear()
+            # Solo se sueltan las direcciones del mando (claves negativas); las flechas que siguen
+            # presionadas en el teclado se conservan.
+            self._held_direction_keys = {held for held in self._held_direction_keys if held[1] >= 0}
+            reset_gamepad_commands(self.ecs_world)
+            self._update_player_direction()
         # Al perder el foco pygame puede no enviar el KEYUP; sin esto una flecha quedaría "pegada".
         if event.type == pygame.WINDOWFOCUSLOST:
             self._held_direction_keys.clear()
+            reset_gamepad_commands(self.ecs_world)
             # Si el jugador se va a otra ventana, el juego no sigue sin él.
             if self.state == PlayState.PLAYING:
                 self.toggle_pause()

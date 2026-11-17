@@ -75,8 +75,11 @@ class GameEngine:
 
     def _process_events(self) -> None:
         for event in pygame.event.get():
-            ServiceLocator.gamepad_service.handle_event(event)
-            self._current_scene.process_events(event)
+            gamepads = ServiceLocator.gamepad_service
+            accepted = gamepads.accepts(event)
+            gamepads.handle_event(event)
+            if accepted:
+                self._current_scene.process_events(event)
             if event.type == pygame.QUIT:
                 self.is_running = False
 

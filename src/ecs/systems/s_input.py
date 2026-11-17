@@ -53,3 +53,14 @@ def system_input(world: esper.World, event: pygame.event.Event,
         if phase is not None:
             c_input.phase = phase
             do_action(c_input)
+
+
+def reset_gamepad_commands(world: esper.World) -> None:
+    """Deja en NA los comandos del gamepad.
+
+    Se usa cuando se pierde el estado del mando (desconexión o pérdida de foco): sin esto un eje
+    que quedó en START no vuelve a dar START hasta pasar por el centro.
+    """
+    c_input: CInputCommand
+    for _, (c_input, _) in world.get_components(CInputCommand, CGamepadBinding):
+        c_input.phase = CommandPhase.NA
