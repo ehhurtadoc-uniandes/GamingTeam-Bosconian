@@ -37,6 +37,7 @@ from src.ecs.systems.s_pause import system_pause_visibility
 from src.ecs.systems.s_player_death import (is_vulnerable, kill_player, system_player_death,
                                            system_player_invulnerability, system_player_respawn)
 from src.ecs.systems.s_player_fire import system_player_fire, system_player_weapon_cooldown
+from src.ecs.systems.s_player_sprite import system_player_sprite
 from src.ecs.systems.s_player_movement import system_player_acceleration, system_player_direction
 from src.ecs.systems.s_score import system_score_hud
 from src.ecs.systems.s_starfield import system_star_blink, system_starfield
@@ -166,6 +167,7 @@ class PlayScene(Scene):
             self.switch_scene(constants.defeat_scene)
         system_player_acceleration(self.ecs_world, delta_time)
         system_player_weapon_cooldown(self.ecs_world, delta_time)
+        system_player_sprite(self.ecs_world)
         # Los enemigos persiguen la posición del jugador. El estado va antes que el
         # steering porque ajusta sus pesos. Con world_size persiguen cruzando los bordes.
         player_pos = self.ecs_world.component_for_entity(self._player_entity, CTransform).pos

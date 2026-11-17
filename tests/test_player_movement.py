@@ -1,6 +1,10 @@
 import json
+import os
 import unittest
 from pathlib import Path
+
+os.environ["SDL_VIDEODRIVER"] = "dummy"
+os.environ["SDL_AUDIODRIVER"] = "dummy"
 
 import esper
 import pygame
@@ -18,6 +22,8 @@ PLAYER_INFO: dict = {}
 
 
 def setUpModule():
+    pygame.display.init()
+    pygame.display.set_mode((1, 1))
     with open(PLAYER_CFG, encoding="utf-8") as f:
         PLAYER_INFO.update(json.load(f))
 
