@@ -110,6 +110,25 @@ class TestSpritesDelJugador(unittest.TestCase):
         build_directional_frames(image, (8, 8))
         self.assertEqual(image.get_size(), (4, 6))
 
+    def test_una_imagen_que_no_cabe_girada_da_error(self):
+        image = pygame.Surface((8, 8), pygame.SRCALPHA)
+        # Recta cabe justo, pero girada 45° mide ~12 px.
+        with self.assertRaises(ValueError):
+            build_directional_frames(image, (8, 8))
+
+    def test_los_cuadros_se_generan_una_vez_y_se_reutilizan(self):
+        first = self.world.component_for_entity(self.player, CDirectionalSprite).frames
+        other_world = esper.World()
+        other = create_player(other_world, self.info, V(0, 0))
+        second = other_world.component_for_entity(other, CDirectionalSprite).frames
+        for a, b in zip(first, second, strict=True):
+            self.assertIs(a, b)
+
+    def test_con_imagen_no_se_crea_el_cuadrado_de_color(self):
+        c_s = self.world.component_for_entity(self.player, CSurface)
+        frames = self.world.component_for_entity(self.player, CDirectionalSprite).frames
+        self.assertIs(c_s.surf, frames[0])
+
 
 class TestSpriteEnPlayScene(unittest.TestCase):
     def setUp(self):
