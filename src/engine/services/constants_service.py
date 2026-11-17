@@ -1,5 +1,7 @@
 import pygame
 
+from src.ecs.components.c_hitbox import CollisionLayer
+
 
 class ConstantsService:
     """Constantes del juego en un solo lugar: rutas de los JSON y valores fijos del código.
@@ -26,6 +28,7 @@ class ConstantsService:
         self.credits_config = "assets/cfg/credits.json"
         self.pause_config = "assets/cfg/pause.json"
         self.explosions_config = "assets/cfg/explosions.json"
+        self.defeat_config = "assets/cfg/defeat.json"
         self.obstacles_config = "assets/cfg/obstacles.json"
         self.minimap_config = "assets/cfg/minimap.json"
 
@@ -45,6 +48,10 @@ class ConstantsService:
         # Una base de Bosconian siempre tiene seis torretas; base.json debe traer un offset para cada una.
         self.turrets_per_base = 6
 
+        self.player_death_layers = (CollisionLayer.ENEMY, CollisionLayer.ENEMY_BULLET, CollisionLayer.OBSTACLE)
+        self.player_kills_layers = (CollisionLayer.ENEMY, CollisionLayer.ENEMY_BULLET)
+        self.defeat_scene = "defeat"
+
         # Dirección de cada comando de movimiento del jugador.
         self.direction_commands = {
             "PLAYER_UP": pygame.Vector2(0, -1),
@@ -62,6 +69,7 @@ class ConstantsService:
         self.fire_command = "PLAYER_FIRE"
         self.debug_hitboxes_command = "DEBUG_HITBOXES"
         self.debug_explode_command = "DEBUG_EXPLODE"
+        self.debug_kill_command = "DEBUG_KILL"
         # Con el modo de depuración, estas teclas crean enemigos (valor de EnemyType) a pedido,
         # además de los del spawner (#28).
         self.debug_spawn_commands = {

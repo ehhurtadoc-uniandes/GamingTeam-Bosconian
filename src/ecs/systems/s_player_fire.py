@@ -2,6 +2,7 @@ import esper
 import pygame
 
 from src.create.prefab_player_bullet import create_player_bullet
+from src.ecs.components.c_player_dead import CPlayerDead
 from src.ecs.components.c_player_movement import CPlayerMovement
 from src.ecs.components.c_player_weapon import CPlayerWeapon
 from src.ecs.components.c_special_shot import CSpecialShot
@@ -27,7 +28,7 @@ def system_player_fire(world: esper.World) -> None:
     c_pm: CPlayerMovement
     c_w: CPlayerWeapon
     for entity, (c_t, c_s, c_pm, c_w, _) in components:
-        if c_w.time_left > 0:
+        if c_w.time_left > 0 or world.has_component(entity, CPlayerDead):
             continue
         center = c_t.pos + pygame.Vector2(c_s.area.size) / 2
         special = world.try_component(entity, CSpecialShot)
