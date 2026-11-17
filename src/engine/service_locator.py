@@ -1,6 +1,7 @@
 from src.engine.services.configs_service import ConfigsService
 from src.engine.services.constants_service import ConstantsService
 from src.engine.services.fonts_service import FontsService
+from src.engine.services.gamepad_service import GamepadService
 from src.engine.services.game_state_service import GameStateService
 from src.engine.services.images_service import ImagesService
 from src.engine.services.sounds_service import SoundsService
@@ -15,3 +16,4 @@ class ServiceLocator:
     configs_service = ConfigsService()
     constants_service = ConstantsService()
     game_state_service = GameStateService()
+    gamepad_service = GamepadService()

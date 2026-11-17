@@ -1,0 +1,30 @@
+{
+  "dead_zone": 0.5,
+  "buttons": {
+    "PLAYER_FIRE": [0],
+    "PLAYER_SPECIAL": [1],
+    "PAUSE": [7],
+    "MENU_ACCEPT": [0],
+    "MENU_BACK": [1]
+  },
+  "axes": {
+    "PLAYER_LEFT": [{ "axis": 0, "sign": -1 }],
+    "PLAYER_RIGHT": [{ "axis": 0, "sign": 1 }],
+    "PLAYER_UP": [{ "axis": 1, "sign": -1 }],
+    "PLAYER_DOWN": [{ "axis": 1, "sign": 1 }],
+    "MENU_LEFT": [{ "axis": 0, "sign": -1 }],
+    "MENU_RIGHT": [{ "axis": 0, "sign": 1 }],
+    "MENU_UP": [{ "axis": 1, "sign": -1 }],
+    "MENU_DOWN": [{ "axis": 1, "sign": 1 }]
+  },
+  "hats": {
+    "PLAYER_LEFT": [{ "hat": 0, "x": -1 }],
+    "PLAYER_RIGHT": [{ "hat": 0, "x": 1 }],
+    "PLAYER_UP": [{ "hat": 0, "y": 1 }],
+    "PLAYER_DOWN": [{ "hat": 0, "y": -1 }],
+    "MENU_LEFT": [{ "hat": 0, "x": -1 }],
+    "MENU_RIGHT": [{ "hat": 0, "x": 1 }],
+    "MENU_UP": [{ "hat": 0, "y": 1 }],
+    "MENU_DOWN": [{ "hat": 0, "y": -1 }]
+  }
+}
