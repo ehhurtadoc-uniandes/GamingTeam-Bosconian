@@ -9,7 +9,9 @@ os.environ["SDL_AUDIODRIVER"] = "dummy"
 import esper
 import pygame
 
+from src.create.prefab_input import create_gamepad_input
 from src.ecs.components.c_enemy import CEnemy
+from src.ecs.components.c_input_command import CInputCommand
 from src.ecs.components.c_player_movement import CPlayerMovement
 from src.ecs.components.c_star import CStar
 from src.ecs.components.c_surface import CSurface
@@ -19,6 +21,7 @@ from src.ecs.components.tags.c_tag_background import CTagBackground
 from src.ecs.components.tags.c_tag_hidden import CTagHidden
 from src.ecs.components.tags.c_tag_hide_on_pause import CTagHideOnPause
 from src.ecs.components.tags.c_tag_player import CTagPlayer
+from src.ecs.components.tags.c_tag_player_bullet import CTagPlayerBullet
 from src.ecs.components.tags.c_tag_ui import CTagUI
 from src.ecs.systems.s_pause import system_pause_visibility
 from src.ecs.systems.s_rendering import system_rendering
@@ -26,6 +29,7 @@ from src.ecs.systems.s_starfield import system_star_blink
 from src.engine.game_engine import GameEngine
 from src.engine.service_locator import ServiceLocator
 from src.scenes.play_scene import PlayState
+from tests.test_gamepad import button
 
 WHITE = pygame.Color(255, 255, 255)
 BLINK = {"on": {"min": 1.0, "max": 1.0}, "off": {"min": 0.5, "max": 0.5}}
@@ -184,6 +188,115 @@ class TestPlayScenePause(unittest.TestCase):
         self.press(pygame.K_p)
         direction = self.world.component_for_entity(self.player, CPlayerMovement).direction
         self.assertEqual(direction, pygame.Vector2(1, 0))
+
+
+class TestPauseMenu(TestPlayScenePause):
+    """Menú de la pausa: el mismo estilo de menú que el título (LC-ESC-04.3.5)."""
+
+    def test_al_pausar_se_ve_el_menu(self):
+        self.press(pygame.K_p)
+        texts = {c.text for _, c in self.world.get_component(CText)}
+        self.assertTrue({"CONTINUAR", "INSTRUCCIONES", "CREDITOS", "SALIR AL TITULO"} <= texts)
+        self.scene.simulate(DT)
+        self.scene.do_draw(self.engine.screen)
+
+    def test_continuar_reanuda_sin_disparar(self):
+        self.press(pygame.K_p)
+        self.press(pygame.K_z)
+        self.assertEqual(self.scene.state, PlayState.PLAYING)
+        # Z también es PLAYER_FIRE: el mismo toque que reanuda no debe disparar.
+        self.assertEqual(self.world.get_component(CTagPlayerBullet), [])
+        self.assertEqual(self.menu_texts(), set())
+
+    def test_escape_reanuda_una_sola_vez(self):
+        self.press(pygame.K_ESCAPE)
+        self.assertEqual(self.scene.state, PlayState.PAUSED)
+        self.press(pygame.K_ESCAPE)
+        self.assertEqual(self.scene.state, PlayState.PLAYING)
+
+    def test_instrucciones_en_pausa_y_volver_al_menu(self):
+        self.press(pygame.K_p)
+        self.press(pygame.K_DOWN)
+        self.press(pygame.K_z)
+        self.assertEqual(self.scene.state, PlayState.PAUSED_INFO)
+        self.assertIn("Z: DISPARAR", self.all_texts())
+        self.assertNotIn("CONTINUAR", self.all_texts())
+        # Escape es PAUSE y MENU_BACK: vuelve al menú una sola vez, no reanuda.
+        self.press(pygame.K_ESCAPE)
+        self.assertEqual(self.scene.state, PlayState.PAUSED)
+        self.assertNotIn("Z: DISPARAR", self.all_texts())
+        self.assertEqual(self.scene._pause_selected, 1)
+
+    def test_creditos_en_pausa(self):
+        self.press(pygame.K_p)
+        self.press(pygame.K_DOWN)
+        self.press(pygame.K_DOWN)
+        self.press(pygame.K_RETURN)
+        self.assertIn("ESTEBAN LEAL", self.all_texts())
+        self.press(pygame.K_z)
+        self.assertEqual(self.scene.state, PlayState.PAUSED)
+
+    def test_en_pausa_el_mundo_sigue_quieto_y_escondido_mientras_se_leen_instrucciones(self):
+        self.press(pygame.K_p)
+        before = self.player_pos()
+        self.press(pygame.K_DOWN)
+        self.press(pygame.K_z)
+        for _ in range(30):
+            self.scene.simulate(DT)
+        self.assertEqual(self.player_pos(), before)
+        self.assertTrue(self.world.has_component(self.player, CTagHidden))
+
+    def test_salir_al_titulo(self):
+        self.press(pygame.K_p)
+        self.press(pygame.K_UP)
+        self.press(pygame.K_z)
+        self.assertEqual(self.engine._scene_name_to_switch, "title")
+
+    def all_texts(self):
+        return {c.text for _, c in self.world.get_component(CText)}
+
+    def menu_texts(self):
+        return self.all_texts() & {"CONTINUAR", "INSTRUCCIONES", "CREDITOS", "SALIR AL TITULO"}
+
+
+class TestPauseMenuGamepad(TestPlayScenePause):
+    """Con el gamepad, una pulsación del menú de pausa tampoco hace dos cosas (LC-ESC-04.3.5).
+
+    En el gamepad cada comando tiene su propia clave, así que el botón A es PLAYER_FIRE con una
+    clave y MENU_ACCEPT con otra: no basta con recordar la tecla que ya se usó.
+    """
+
+    def tap(self, index):
+        self.scene.process_events(button(pygame.JOYBUTTONDOWN, index))
+        self.scene.process_events(button(pygame.JOYBUTTONUP, index))
+
+    def use_gamepad_config(self, buttons):
+        for entity, c_input in list(self.world.get_component(CInputCommand)):
+            if c_input.key < 0:
+                self.world.delete_entity(entity, immediate=True)
+        create_gamepad_input(self.world, {"dead_zone": 0.5, "buttons": buttons})
+
+    def test_a_en_continuar_reanuda_sin_disparar(self):
+        self.tap(7)
+        self.assertEqual(self.scene.state, PlayState.PAUSED)
+        self.tap(0)
+        self.assertEqual(self.scene.state, PlayState.PLAYING)
+        self.assertEqual(self.world.get_component(CTagPlayerBullet), [])
+
+    def test_no_depende_del_orden_de_los_comandos_en_el_json(self):
+        # MENU_ACCEPT antes que PLAYER_FIRE: el mismo toque que reanuda llega después como disparo.
+        self.use_gamepad_config({"PAUSE": [7], "MENU_ACCEPT": [0], "PLAYER_FIRE": [0]})
+        self.tap(7)
+        self.tap(0)
+        self.assertEqual(self.scene.state, PlayState.PLAYING)
+        self.assertEqual(self.world.get_component(CTagPlayerBullet), [])
+
+    def test_el_siguiente_toque_si_dispara(self):
+        self.use_gamepad_config({"PAUSE": [7], "MENU_ACCEPT": [0], "PLAYER_FIRE": [0]})
+        self.tap(7)
+        self.tap(0)
+        self.tap(0)
+        self.assertNotEqual(self.world.get_component(CTagPlayerBullet), [])
 
 
 if __name__ == "__main__":

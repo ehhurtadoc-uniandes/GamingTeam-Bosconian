@@ -52,6 +52,7 @@ class ConstantsService:
         self.player_death_layers = (CollisionLayer.ENEMY, CollisionLayer.ENEMY_BULLET, CollisionLayer.OBSTACLE)
         self.player_kills_layers = (CollisionLayer.ENEMY, CollisionLayer.ENEMY_BULLET)
         self.defeat_scene = "defeat"
+        self.title_scene = "title"
 
         # Dirección de cada comando de movimiento del jugador.
         self.direction_commands = {

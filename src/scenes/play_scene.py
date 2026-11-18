@@ -8,6 +8,7 @@ from src.create.prefab_camera import create_camera
 from src.create.prefab_enemy import create_enemy
 from src.create.prefab_enemy_spawner import create_enemy_spawner
 from src.create.prefab_hud import create_lives_hud, create_score_hud
+from src.create.prefab_menu import create_menu, create_text_lines
 from src.create.prefab_minimap import create_minimap
 from src.create.prefab_obstacle import create_obstacles
 from src.create.prefab_player import create_player
@@ -17,6 +18,8 @@ from src.create.prefab_text import create_interface_text
 from src.ecs.components.c_input_command import CInputCommand, CommandPhase
 from src.ecs.components.c_surface import CSurface
 from src.ecs.components.c_transform import CTransform
+from src.ecs.components.c_menu_item import CMenuItem
+from src.ecs.components.tags.c_tag_pause_overlay import CTagPauseOverlay
 from src.create.prefab_explosion import create_explosion_for, destroy_with_explosion
 from src.ecs.components.c_enemy import CEnemy, EnemyType
 from src.ecs.systems.s_animation import system_animation
@@ -37,6 +40,7 @@ from src.ecs.systems.s_movement import system_movement
 from src.ecs.systems.s_obstacles import system_mine_blast, system_player_bullet_obstacle
 from src.ecs.systems.s_offscreen_despawn import system_offscreen_despawn
 from src.ecs.systems.s_pause import system_pause_visibility
+from src.ecs.systems.s_menu import get_menu, move_selection, selected_action, system_menu_highlight
 from src.ecs.systems.s_player_death import (is_vulnerable, kill_player, system_player_death,
                                            system_player_invulnerability, system_player_respawn)
 from src.ecs.systems.s_player_fire import system_player_fire, system_player_weapon_cooldown
@@ -76,9 +80,15 @@ def random_edge_position(screen_rect: pygame.Rect, size: pygame.Vector2) -> pyga
 
 
 class PlayState(Enum):
-    """Estado de la escena de juego (patrón State). PAUSED congela todo menos el parpadeo de las estrellas."""
+    """Estado de la escena de juego (patrón State).
+
+    - PLAYING: el juego corre.
+    - PAUSED: todo se congela menos el parpadeo de las estrellas y se ve el menú de pausa.
+    - PAUSED_INFO: sigue en pausa, mostrando las instrucciones o los créditos (LC-ESC-04.3.5).
+    """
     PLAYING = 0
     PAUSED = 1
+    PAUSED_INFO = 2
 
 
 class PlayScene(Scene):
@@ -95,8 +105,13 @@ class PlayScene(Scene):
         # Se guardan teclas y no acciones: si una dirección tiene varias teclas, soltar una no la apaga.
         self._held_direction_keys: set[tuple[str, int]] = set()
         self.state = PlayState.PLAYING
-        self._pause_text: int | None = None
         self._pause_info: dict = {}
+        # Opción del menú de pausa a la que se vuelve desde las instrucciones o los créditos.
+        self._pause_selected = 0
+        # El evento actual ya cambió la pausa. Escape es PAUSE y MENU_BACK, y Z (o el botón A) es
+        # disparo y MENU_ACCEPT: sin esto, un mismo toque haría dos cosas (p. ej. reanudar y disparar).
+        # Se marca el evento y no la tecla porque en el gamepad cada comando tiene su propia clave.
+        self._event_consumed = False
         self._show_hitboxes = False
         self._has_special_shot = False
         self._respawn_info: dict = {}
@@ -108,7 +123,8 @@ class PlayScene(Scene):
         self.level_index = ServiceLocator.game_state_service.level_index
         self.state = PlayState.PLAYING
         self._show_hitboxes = False
-        self._pause_text = None
+        self._pause_selected = 0
+        self._event_consumed = False
         self._pause_info = ServiceLocator.configs_service.get(constants.pause_config)
         world_info = ServiceLocator.configs_service.get(constants.world_config)
         self.world_size = world_size_from_config(world_info)
@@ -165,9 +181,11 @@ class PlayScene(Scene):
         return c_t.pos + pygame.Vector2(c_s.area.size) / 2
 
     def do_update(self, delta_time: float) -> None:
-        if self.state == PlayState.PAUSED:
+        if self.state != PlayState.PLAYING:
             # En pausa nada se mueve; las estrellas siguen brillando quietas (LC-ESC-04.3.2).
             system_star_blink(self.ecs_world, delta_time, self._stars_info["blink"])
+            if self.state == PlayState.PAUSED:
+                system_menu_highlight(self.ecs_world)
             return
         constants = ServiceLocator.constants_service
         # Al principio: si reaparece en el inicio, los enemigos ya lo persiguen ahí en este paso.
@@ -224,7 +242,7 @@ class PlayScene(Scene):
     def do_draw(self, screen: pygame.Surface) -> None:
         super().do_draw(screen)
         # En pausa los enemigos no se ven, así que tampoco sus etiquetas.
-        if not self._debug_info["enabled"] or self.state == PlayState.PAUSED:
+        if not self._debug_info["enabled"] or self.state != PlayState.PLAYING:
             return
         font = ServiceLocator.fonts_service.get(self._debug_info["font"], self._debug_info["font_size"])
         c = self._debug_info["label_color"]
@@ -240,10 +258,7 @@ class PlayScene(Scene):
 
     def do_action(self, action: CInputCommand) -> None:
         constants = ServiceLocator.constants_service
-        if action.name == constants.pause_command:
-            if action.phase == CommandPhase.START:
-                self.toggle_pause()
-        elif action.name in constants.direction_commands:
+        if action.name in constants.direction_commands:
             # También en pausa: así, al reanudar, la dirección es la de las flechas que siguen presionadas.
             held = (action.name, action.key)
             if action.phase == CommandPhase.START:
@@ -251,9 +266,17 @@ class PlayScene(Scene):
             else:
                 self._held_direction_keys.discard(held)
             self._update_player_direction()
-        elif self.state == PlayState.PAUSED:
-            # En pausa se ignora todo lo demás (disparo, depuración).
+        elif action.phase == CommandPhase.START and self._event_consumed:
+            # Esta misma pulsación ya cambió la pausa con otro comando.
             return
+        elif self.state == PlayState.PAUSED:
+            self._pause_menu_action(action)
+        elif self.state == PlayState.PAUSED_INFO:
+            self._pause_info_action(action)
+        elif action.name == constants.pause_command:
+            if action.phase == CommandPhase.START:
+                self._event_consumed = True
+                self.toggle_pause()
         elif action.name == constants.fire_command:
             if action.phase == CommandPhase.START:
                 system_player_fire(self.ecs_world)
@@ -278,19 +301,82 @@ class PlayScene(Scene):
         system_player_direction(self.ecs_world, direction_from_commands(active))
 
     def toggle_pause(self) -> None:
-        """Pausa o reanuda (LC-ESC-04.3): esconde el mundo y el minimapa y muestra "JUEGO PAUSADO"."""
+        """Pausa o reanuda (LC-ESC-04.3): esconde el mundo y el minimapa y muestra el menú de pausa."""
         if self.state == PlayState.PLAYING:
-            self.state = PlayState.PAUSED
             system_pause_visibility(self.ecs_world, paused=True)
-            text_info = self._pause_info["text"]
-            self._pause_text = create_interface_text(self.ecs_world, text_info["text"], text_info)
+            self._show_pause_menu(0)
         else:
+            self._clear_pause_overlay()
             self.state = PlayState.PLAYING
             system_pause_visibility(self.ecs_world, paused=False)
-            self.ecs_world.delete_entity(self._pause_text, immediate=True)
-            self._pause_text = None
+
+    def _pause_menu_action(self, action: CInputCommand) -> None:
+        """Menú de pausa: elegir con arriba y abajo y aceptar; pausa o volver reanudan."""
+        if action.phase != CommandPhase.START:
+            return
+        constants = ServiceLocator.constants_service
+        if action.name in constants.menu_move_commands:
+            menu = get_menu(self.ecs_world)
+            menu.selected = move_selection(menu.selected, constants.menu_move_commands[action.name], menu.count)
+            return
+        if action.name in (constants.pause_command, constants.menu_back_command):
+            choice = "RESUME"
+        elif action.name == constants.menu_accept_command:
+            choice = selected_action(self.ecs_world)
+        else:
+            return
+        self._event_consumed = True
+        self._pause_selected = get_menu(self.ecs_world).selected
+        if choice == "RESUME":
+            self.toggle_pause()
+        elif choice == "INSTRUCTIONS":
+            self._show_pause_info(constants.instructions_config)
+        elif choice == "CREDITS":
+            self._show_pause_info(constants.credits_config)
+        elif choice == "QUIT":
+            self.switch_scene(constants.title_scene)
+
+    def _pause_info_action(self, action: CInputCommand) -> None:
+        """Instrucciones o créditos en pausa: aceptar, volver o pausa regresan al menú de pausa."""
+        constants = ServiceLocator.constants_service
+        if action.phase == CommandPhase.START and action.name in (
+                constants.menu_accept_command, constants.menu_back_command, constants.pause_command):
+            self._event_consumed = True
+            self._show_pause_menu(self._pause_selected)
+
+    def _show_pause_menu(self, selected: int) -> None:
+        """Muestra "JUEGO PAUSADO" y el menú de pausa, con el mismo estilo de menú que el título."""
+        self._clear_pause_overlay()
+        self.state = PlayState.PAUSED
+        text_info = self._pause_info["text"]
+        overlay = [create_interface_text(self.ecs_world, text_info["text"], text_info),
+                   create_menu(self.ecs_world, self._pause_info["menu"])]
+        overlay += [entity for entity, _ in self.ecs_world.get_component(CMenuItem)]
+        get_menu(self.ecs_world).selected = selected
+        system_menu_highlight(self.ecs_world)
+        self._tag_pause_overlay(overlay)
+
+    def _show_pause_info(self, config_path: str) -> None:
+        """Muestra las líneas de las instrucciones o los créditos sin salir de la partida."""
+        self._clear_pause_overlay()
+        self.state = PlayState.PAUSED_INFO
+        config = ServiceLocator.configs_service.get(config_path)
+        hint_info = self._pause_info["info_hint"]
+        overlay = create_text_lines(self.ecs_world, config["lines"])
+        overlay.append(create_interface_text(self.ecs_world, hint_info["text"], hint_info))
+        self._tag_pause_overlay(overlay)
+
+    def _tag_pause_overlay(self, entities: list[int]) -> None:
+        for entity in entities:
+            self.ecs_world.add_component(entity, CTagPauseOverlay())
+
+    def _clear_pause_overlay(self) -> None:
+        for entity, _ in self.ecs_world.get_component(CTagPauseOverlay):
+            self.ecs_world.delete_entity(entity, immediate=True)
 
     def do_process_events(self, event: pygame.event.Event) -> None:
+        # system_input ya repartió este evento a todos sus comandos; el siguiente empieza de cero.
+        self._event_consumed = False
         if event.type == pygame.JOYDEVICEREMOVED:
             # Solo se sueltan las direcciones del mando (claves negativas); las flechas que siguen
             # presionadas en el teclado se conservan.

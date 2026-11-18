@@ -1,8 +1,64 @@
 {
   "text": {
     "text": "JUEGO PAUSADO",
-    "anchor": { "x": 128, "y": 100 },
+    "anchor": {
+      "x": 128,
+      "y": 56
+    },
     "alignment": "CENTER",
-    "color": { "r": 255, "g": 255, "b": 255 }
+    "color": {
+      "r": 255,
+      "g": 255,
+      "b": 255
+    }
+  },
+  "menu": {
+    "anchor": {
+      "x": 128,
+      "y": 84
+    },
+    "line_height": 14,
+    "alignment": "CENTER",
+    "color": {
+      "r": 255,
+      "g": 255,
+      "b": 255
+    },
+    "selected_color": {
+      "r": 255,
+      "g": 230,
+      "b": 80
+    },
+    "options": [
+      {
+        "text": "CONTINUAR",
+        "action": "RESUME"
+      },
+      {
+        "text": "INSTRUCCIONES",
+        "action": "INSTRUCTIONS"
+      },
+      {
+        "text": "CREDITOS",
+        "action": "CREDITS"
+      },
+      {
+        "text": "SALIR AL TITULO",
+        "action": "QUIT"
+      }
+    ]
+  },
+  "info_hint": {
+    "text": "Z / ESC: VOLVER",
+    "anchor": {
+      "x": 128,
+      "y": 180
+    },
+    "alignment": "CENTER",
+    "color": {
+      "r": 120,
+      "g": 120,
+      "b": 120
+    }
   }
 }
