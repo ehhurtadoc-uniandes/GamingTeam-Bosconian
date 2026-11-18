@@ -19,6 +19,7 @@ from src.ecs.components.tags.c_tag_background import CTagBackground
 from src.ecs.components.tags.c_tag_hidden import CTagHidden
 from src.ecs.components.tags.c_tag_hide_on_pause import CTagHideOnPause
 from src.ecs.components.tags.c_tag_player import CTagPlayer
+from src.ecs.components.tags.c_tag_player_bullet import CTagPlayerBullet
 from src.ecs.components.tags.c_tag_ui import CTagUI
 from src.ecs.systems.s_pause import system_pause_visibility
 from src.ecs.systems.s_rendering import system_rendering
@@ -184,6 +185,75 @@ class TestPlayScenePause(unittest.TestCase):
         self.press(pygame.K_p)
         direction = self.world.component_for_entity(self.player, CPlayerMovement).direction
         self.assertEqual(direction, pygame.Vector2(1, 0))
+
+
+class TestPauseMenu(TestPlayScenePause):
+    """Menú de la pausa: el mismo estilo de menú que el título (LC-ESC-04.3.5)."""
+
+    def test_al_pausar_se_ve_el_menu(self):
+        self.press(pygame.K_p)
+        texts = {c.text for _, c in self.world.get_component(CText)}
+        self.assertTrue({"CONTINUAR", "INSTRUCCIONES", "CREDITOS", "SALIR AL TITULO"} <= texts)
+        self.scene.simulate(DT)
+        self.scene.do_draw(self.engine.screen)
+
+    def test_continuar_reanuda_sin_disparar(self):
+        self.press(pygame.K_p)
+        self.press(pygame.K_z)
+        self.assertEqual(self.scene.state, PlayState.PLAYING)
+        # Z también es PLAYER_FIRE: el mismo toque que reanuda no debe disparar.
+        self.assertEqual(self.world.get_component(CTagPlayerBullet), [])
+        self.assertEqual(self.menu_texts(), set())
+
+    def test_escape_reanuda_una_sola_vez(self):
+        self.press(pygame.K_ESCAPE)
+        self.assertEqual(self.scene.state, PlayState.PAUSED)
+        self.press(pygame.K_ESCAPE)
+        self.assertEqual(self.scene.state, PlayState.PLAYING)
+
+    def test_instrucciones_en_pausa_y_volver_al_menu(self):
+        self.press(pygame.K_p)
+        self.press(pygame.K_DOWN)
+        self.press(pygame.K_z)
+        self.assertEqual(self.scene.state, PlayState.PAUSED_INFO)
+        self.assertIn("Z: DISPARAR", self.all_texts())
+        self.assertNotIn("CONTINUAR", self.all_texts())
+        # Escape es PAUSE y MENU_BACK: vuelve al menú una sola vez, no reanuda.
+        self.press(pygame.K_ESCAPE)
+        self.assertEqual(self.scene.state, PlayState.PAUSED)
+        self.assertNotIn("Z: DISPARAR", self.all_texts())
+        self.assertEqual(self.scene._pause_selected, 1)
+
+    def test_creditos_en_pausa(self):
+        self.press(pygame.K_p)
+        self.press(pygame.K_DOWN)
+        self.press(pygame.K_DOWN)
+        self.press(pygame.K_RETURN)
+        self.assertIn("ESTEBAN LEAL", self.all_texts())
+        self.press(pygame.K_z)
+        self.assertEqual(self.scene.state, PlayState.PAUSED)
+
+    def test_en_pausa_el_mundo_sigue_quieto_y_escondido_mientras_se_leen_instrucciones(self):
+        self.press(pygame.K_p)
+        before = self.player_pos()
+        self.press(pygame.K_DOWN)
+        self.press(pygame.K_z)
+        for _ in range(30):
+            self.scene.simulate(DT)
+        self.assertEqual(self.player_pos(), before)
+        self.assertTrue(self.world.has_component(self.player, CTagHidden))
+
+    def test_salir_al_titulo(self):
+        self.press(pygame.K_p)
+        self.press(pygame.K_UP)
+        self.press(pygame.K_z)
+        self.assertEqual(self.engine._scene_name_to_switch, "title")
+
+    def all_texts(self):
+        return {c.text for _, c in self.world.get_component(CText)}
+
+    def menu_texts(self):
+        return self.all_texts() & {"CONTINUAR", "INSTRUCCIONES", "CREDITOS", "SALIR AL TITULO"}
 
 
 if __name__ == "__main__":
