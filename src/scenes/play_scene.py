@@ -81,6 +81,7 @@ def random_edge_position(screen_rect: pygame.Rect, size: pygame.Vector2) -> pyga
 class PlayState(Enum):
     """Estado de la escena de juego (patrón State).
 
+    - STARTING: inicio del nivel (LC-ESC-04.2). Se ve "BLAST OFF!", suena su sonido y nada se mueve.
     - PLAYING: el juego corre.
     - PAUSED: todo se congela menos el parpadeo de las estrellas y se ve el menú de pausa.
     - PAUSED_INFO: sigue en pausa, mostrando las instrucciones o los créditos (LC-ESC-04.3.5).
@@ -88,6 +89,7 @@ class PlayState(Enum):
     PLAYING = 0
     PAUSED = 1
     PAUSED_INFO = 2
+    STARTING = 3
 
 
 class PlayScene(Scene):
@@ -105,6 +107,9 @@ class PlayScene(Scene):
         self._held_direction_keys: set[tuple[str, int]] = set()
         self.state = PlayState.PLAYING
         self._pause_info: dict = {}
+        self._blast_off_info: dict = {}
+        self._blast_off_time = 0.0
+        self._blast_off_text: int | None = None
         # Opción del menú de pausa a la que se vuelve desde las instrucciones o los créditos.
         self._pause_selected = 0
         # Tecla que ya cambió la pausa en este evento. Escape es PAUSE y MENU_BACK, y Z es disparo
@@ -120,6 +125,7 @@ class PlayScene(Scene):
         self._held_direction_keys.clear()
         self.level_index = ServiceLocator.game_state_service.level_index
         self.state = PlayState.PLAYING
+        self._blast_off_info = ServiceLocator.configs_service.get(constants.blast_off_config)
         self._show_hitboxes = False
         self._pause_selected = 0
         self._consumed_key = None
@@ -144,6 +150,7 @@ class PlayScene(Scene):
         create_score_hud(self.ecs_world, score_info["hud"])
         create_lives_hud(self.ecs_world, score_info["lives"]["hud"])
         create_minimap(self.ecs_world, ServiceLocator.configs_service.get(constants.minimap_config))
+        self._start_blast_off()
 
     def _create_level(self) -> None:
         """Crea las entidades del nivel actual según su JSON: bases, spawner de enemigos y obstáculos.
@@ -178,6 +185,9 @@ class PlayScene(Scene):
         return c_t.pos + pygame.Vector2(c_s.area.size) / 2
 
     def do_update(self, delta_time: float) -> None:
+        if self.state == PlayState.STARTING:
+            self._update_blast_off(delta_time)
+            return
         if self.state != PlayState.PLAYING:
             # En pausa nada se mueve; las estrellas siguen brillando quietas (LC-ESC-04.3.2).
             system_star_blink(self.ecs_world, delta_time, self._stars_info["blink"])
@@ -263,6 +273,10 @@ class PlayScene(Scene):
             else:
                 self._held_direction_keys.discard(held)
             self._update_player_direction()
+        elif self.state == PlayState.STARTING:
+            # Durante el BLAST OFF no se dispara ni se pausa; las flechas sí se registran (arriba)
+            # para que la nave salga en la dirección que se mantiene presionada.
+            return
         elif self.state == PlayState.PAUSED:
             self._pause_menu_action(action)
         elif self.state == PlayState.PAUSED_INFO:
@@ -293,6 +307,32 @@ class PlayScene(Scene):
     def _update_player_direction(self) -> None:
         active = {name for name, _ in self._held_direction_keys}
         system_player_direction(self.ecs_world, direction_from_commands(active))
+
+    def _start_blast_off(self) -> None:
+        """Empieza el nivel con "BLAST OFF!" y su sonido; el juego arranca al terminar duration."""
+        self.state = PlayState.STARTING
+        self._blast_off_time = self._blast_off_info["duration"]
+        text_info = self._blast_off_info["text"]
+        self._blast_off_text = create_interface_text(self.ecs_world, text_info["text"], text_info)
+        if self._blast_off_info.get("sound"):
+            ServiceLocator.sounds_service.play(self._blast_off_info["sound"])
+
+    def skip_blast_off(self) -> None:
+        """Termina el BLAST OFF de inmediato. Lo usan las pruebas y sirve para el modo trampa (#40)."""
+        if self.state == PlayState.STARTING:
+            self._update_blast_off(self._blast_off_time)
+
+    def _update_blast_off(self, delta_time: float) -> None:
+        """Mientras dura el BLAST OFF solo brillan las estrellas y se dibujan el HUD y el minimapa."""
+        system_star_blink(self.ecs_world, delta_time, self._stars_info["blink"])
+        system_score_hud(self.ecs_world)
+        system_lives_hud(self.ecs_world)
+        system_minimap(self.ecs_world, delta_time, self.world_size)
+        self._blast_off_time -= delta_time
+        if self._blast_off_time <= 0:
+            self.ecs_world.delete_entity(self._blast_off_text, immediate=True)
+            self._blast_off_text = None
+            self.state = PlayState.PLAYING
 
     def toggle_pause(self) -> None:
         """Pausa o reanuda (LC-ESC-04.3): esconde el mundo y el minimapa y muestra el menú de pausa."""

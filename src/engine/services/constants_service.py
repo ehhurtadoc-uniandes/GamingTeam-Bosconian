@@ -27,6 +27,7 @@ class ConstantsService:
         self.title_config = "assets/cfg/title.json"
         self.instructions_config = "assets/cfg/instructions.json"
         self.credits_config = "assets/cfg/credits.json"
+        self.blast_off_config = "assets/cfg/blast_off.json"
         self.pause_config = "assets/cfg/pause.json"
         self.explosions_config = "assets/cfg/explosions.json"
         self.defeat_config = "assets/cfg/defeat.json"

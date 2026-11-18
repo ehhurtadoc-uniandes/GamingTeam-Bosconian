@@ -233,6 +233,7 @@ class TestExplosionEnPlayScene(unittest.TestCase):
         self.addCleanup(ServiceLocator.fonts_service.clear)
         self.scene = self.engine._scenes["play"]
         self.scene.start()
+        self.scene.skip_blast_off()
 
     def test_config_real_es_valida(self):
         info = real_configs()

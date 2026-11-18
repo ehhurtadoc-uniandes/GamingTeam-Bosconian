@@ -31,6 +31,7 @@ class TestDebugEnemies(unittest.TestCase):
         self.addCleanup(ServiceLocator.fonts_service.clear)
         self.scene = self.engine._scenes["play"]
         self.scene.start()
+        self.scene.skip_blast_off()
 
     def enemy_types(self):
         # esper guarda las entidades en un set: se ordenan por id, que es el orden de creación.

@@ -116,6 +116,7 @@ class TestScene(unittest.TestCase):
     def test_escena_de_juego_mueve_enemigos_hacia_el_jugador_y_los_borra(self):
         scene = self.engine._scenes["play"]
         scene.start()
+        scene.skip_blast_off()
         player_pos = scene.ecs_world.component_for_entity(scene._player_entity, CTransform).pos
         enemies_info = ServiceLocator.configs_service.get("assets/cfg/enemies.json")
         enemy = create_enemy(scene.ecs_world, enemies_info, player_pos + pygame.Vector2(-60, 0), EnemyType.E)

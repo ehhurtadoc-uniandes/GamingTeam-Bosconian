@@ -236,6 +236,7 @@ class TestHitboxEnPlayScene(unittest.TestCase):
         self.addCleanup(ServiceLocator.fonts_service.clear)
         self.scene = self.engine._scenes["play"]
         self.scene.start()
+        self.scene.skip_blast_off()
 
     def test_configs_reales_tienen_hitbox_no_mayor_que_el_sprite(self):
         constants = ServiceLocator.constants_service

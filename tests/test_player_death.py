@@ -272,6 +272,7 @@ class TestMuerteEnPlayScene(unittest.TestCase):
         reset_game_state()
         self.scene = self.engine._scenes["play"]
         self.scene.start()
+        self.scene.skip_blast_off()
         self.world = self.scene.ecs_world
         for obstacle, _ in self.world.get_component(CObstacle):
             self.world.delete_entity(obstacle)
