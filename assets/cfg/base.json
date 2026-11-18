@@ -20,8 +20,8 @@
   "bullet": {
     "size": { "w": 3, "h": 3 },
     "color": { "r": 255, "g": 230, "b": 120 },
-    "speed": 90,
-    "lifetime": 2.0
+    "speed": 25,
+    "lifetime": 7.0
   },
   "points": { "turret": 200, "base": 1500 },
   "turret_offsets": [
