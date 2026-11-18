@@ -9,7 +9,9 @@ os.environ["SDL_AUDIODRIVER"] = "dummy"
 import esper
 import pygame
 
+from src.create.prefab_input import create_gamepad_input
 from src.ecs.components.c_enemy import CEnemy
+from src.ecs.components.c_input_command import CInputCommand
 from src.ecs.components.c_player_movement import CPlayerMovement
 from src.ecs.components.c_star import CStar
 from src.ecs.components.c_surface import CSurface
@@ -27,6 +29,7 @@ from src.ecs.systems.s_starfield import system_star_blink
 from src.engine.game_engine import GameEngine
 from src.engine.service_locator import ServiceLocator
 from src.scenes.play_scene import PlayState
+from tests.test_gamepad import button
 
 WHITE = pygame.Color(255, 255, 255)
 BLINK = {"on": {"min": 1.0, "max": 1.0}, "off": {"min": 0.5, "max": 0.5}}
@@ -254,6 +257,46 @@ class TestPauseMenu(TestPlayScenePause):
 
     def menu_texts(self):
         return self.all_texts() & {"CONTINUAR", "INSTRUCCIONES", "CREDITOS", "SALIR AL TITULO"}
+
+
+class TestPauseMenuGamepad(TestPlayScenePause):
+    """Con el gamepad, una pulsación del menú de pausa tampoco hace dos cosas (LC-ESC-04.3.5).
+
+    En el gamepad cada comando tiene su propia clave, así que el botón A es PLAYER_FIRE con una
+    clave y MENU_ACCEPT con otra: no basta con recordar la tecla que ya se usó.
+    """
+
+    def tap(self, index):
+        self.scene.process_events(button(pygame.JOYBUTTONDOWN, index))
+        self.scene.process_events(button(pygame.JOYBUTTONUP, index))
+
+    def use_gamepad_config(self, buttons):
+        for entity, c_input in list(self.world.get_component(CInputCommand)):
+            if c_input.key < 0:
+                self.world.delete_entity(entity, immediate=True)
+        create_gamepad_input(self.world, {"dead_zone": 0.5, "buttons": buttons})
+
+    def test_a_en_continuar_reanuda_sin_disparar(self):
+        self.tap(7)
+        self.assertEqual(self.scene.state, PlayState.PAUSED)
+        self.tap(0)
+        self.assertEqual(self.scene.state, PlayState.PLAYING)
+        self.assertEqual(self.world.get_component(CTagPlayerBullet), [])
+
+    def test_no_depende_del_orden_de_los_comandos_en_el_json(self):
+        # MENU_ACCEPT antes que PLAYER_FIRE: el mismo toque que reanuda llega después como disparo.
+        self.use_gamepad_config({"PAUSE": [7], "MENU_ACCEPT": [0], "PLAYER_FIRE": [0]})
+        self.tap(7)
+        self.tap(0)
+        self.assertEqual(self.scene.state, PlayState.PLAYING)
+        self.assertEqual(self.world.get_component(CTagPlayerBullet), [])
+
+    def test_el_siguiente_toque_si_dispara(self):
+        self.use_gamepad_config({"PAUSE": [7], "MENU_ACCEPT": [0], "PLAYER_FIRE": [0]})
+        self.tap(7)
+        self.tap(0)
+        self.tap(0)
+        self.assertNotEqual(self.world.get_component(CTagPlayerBullet), [])
 
 
 if __name__ == "__main__":

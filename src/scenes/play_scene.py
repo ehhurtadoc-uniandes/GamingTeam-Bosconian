@@ -107,9 +107,10 @@ class PlayScene(Scene):
         self._pause_info: dict = {}
         # Opción del menú de pausa a la que se vuelve desde las instrucciones o los créditos.
         self._pause_selected = 0
-        # Tecla que ya cambió la pausa en este evento. Escape es PAUSE y MENU_BACK, y Z es disparo
-        # y MENU_ACCEPT: sin esto, un mismo toque haría dos cosas (p. ej. salir del menú y disparar).
-        self._consumed_key: int | None = None
+        # El evento actual ya cambió la pausa. Escape es PAUSE y MENU_BACK, y Z (o el botón A) es
+        # disparo y MENU_ACCEPT: sin esto, un mismo toque haría dos cosas (p. ej. reanudar y disparar).
+        # Se marca el evento y no la tecla porque en el gamepad cada comando tiene su propia clave.
+        self._event_consumed = False
         self._show_hitboxes = False
         self._has_special_shot = False
         self._respawn_info: dict = {}
@@ -122,7 +123,7 @@ class PlayScene(Scene):
         self.state = PlayState.PLAYING
         self._show_hitboxes = False
         self._pause_selected = 0
-        self._consumed_key = None
+        self._event_consumed = False
         self._pause_info = ServiceLocator.configs_service.get(constants.pause_config)
         world_info = ServiceLocator.configs_service.get(constants.world_config)
         self.world_size = world_size_from_config(world_info)
@@ -253,8 +254,6 @@ class PlayScene(Scene):
 
     def do_action(self, action: CInputCommand) -> None:
         constants = ServiceLocator.constants_service
-        if action.phase == CommandPhase.START and action.key == self._consumed_key:
-            return
         if action.name in constants.direction_commands:
             # También en pausa: así, al reanudar, la dirección es la de las flechas que siguen presionadas.
             held = (action.name, action.key)
@@ -263,13 +262,16 @@ class PlayScene(Scene):
             else:
                 self._held_direction_keys.discard(held)
             self._update_player_direction()
+        elif action.phase == CommandPhase.START and self._event_consumed:
+            # Esta misma pulsación ya cambió la pausa con otro comando.
+            return
         elif self.state == PlayState.PAUSED:
             self._pause_menu_action(action)
         elif self.state == PlayState.PAUSED_INFO:
             self._pause_info_action(action)
         elif action.name == constants.pause_command:
             if action.phase == CommandPhase.START:
-                self._consumed_key = action.key
+                self._event_consumed = True
                 self.toggle_pause()
         elif action.name == constants.fire_command:
             if action.phase == CommandPhase.START:
@@ -319,7 +321,7 @@ class PlayScene(Scene):
             choice = selected_action(self.ecs_world)
         else:
             return
-        self._consumed_key = action.key
+        self._event_consumed = True
         self._pause_selected = get_menu(self.ecs_world).selected
         if choice == "RESUME":
             self.toggle_pause()
@@ -335,7 +337,7 @@ class PlayScene(Scene):
         constants = ServiceLocator.constants_service
         if action.phase == CommandPhase.START and action.name in (
                 constants.menu_accept_command, constants.menu_back_command, constants.pause_command):
-            self._consumed_key = action.key
+            self._event_consumed = True
             self._show_pause_menu(self._pause_selected)
 
     def _show_pause_menu(self, selected: int) -> None:
@@ -370,7 +372,7 @@ class PlayScene(Scene):
 
     def do_process_events(self, event: pygame.event.Event) -> None:
         # system_input ya repartió este evento a todos sus comandos; el siguiente empieza de cero.
-        self._consumed_key = None
+        self._event_consumed = False
         if event.type == pygame.JOYDEVICEREMOVED:
             # Solo se sueltan las direcciones del mando (claves negativas); las flechas que siguen
             # presionadas en el teclado se conservan.
