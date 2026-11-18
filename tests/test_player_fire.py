@@ -114,6 +114,7 @@ class TestDisparoEnPlayScene(unittest.TestCase):
         self.addCleanup(level.update, dict(level))
         level["special"] = False
         self.scene.start()
+        self.scene.skip_blast_off()
 
     def test_config_real_tiene_arma(self):
         info = ServiceLocator.configs_service.get(ServiceLocator.constants_service.player_config)

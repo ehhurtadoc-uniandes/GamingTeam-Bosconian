@@ -485,6 +485,7 @@ class TestEnPlayScene(unittest.TestCase):
 
     def test_disparo_al_nucleo_destruye_la_base_en_la_escena(self):
         self.scene.start()
+        self.scene.skip_blast_off()
         world = self.scene.ecs_world
         bases = sorted(entity for entity, _ in world.get_component(CBase))
         base = bases[0]

@@ -197,6 +197,7 @@ class TestHabilidadEnPlayScene(unittest.TestCase):
 
     def test_nivel_con_habilidad_dispara_cuatro_balas_y_muestra_el_mensaje(self):
         self.scene.start()
+        self.scene.skip_blast_off()
         self.assertEqual(len(self.messages()), 1)
         self.scene.process_events(key_event(pygame.KEYDOWN, pygame.K_z))
         self.assertEqual(len(bullet_velocities(self.scene.ecs_world)), 4)
@@ -206,6 +207,7 @@ class TestHabilidadEnPlayScene(unittest.TestCase):
         level["special"] = False
         self.addCleanup(level.__setitem__, "special", True)
         self.scene.start()
+        self.scene.skip_blast_off()
         self.assertEqual(self.messages(), [])
         self.scene.process_events(key_event(pygame.KEYDOWN, pygame.K_z))
         self.assertEqual(len(bullet_velocities(self.scene.ecs_world)), 2)
@@ -215,11 +217,13 @@ class TestHabilidadEnPlayScene(unittest.TestCase):
         del level["special"]
         self.addCleanup(level.__setitem__, "special", True)
         self.scene.start()
+        self.scene.skip_blast_off()
         self.assertEqual(self.messages(), [])
         self.assertIsNone(self.scene.ecs_world.try_component(self.scene._player_entity, CSpecialShot))
 
     def test_el_mensaje_se_borra_con_el_tiempo_y_se_dibuja(self):
         self.scene.start()
+        self.scene.skip_blast_off()
         self.scene.do_draw(self.engine.screen)
         duration = ServiceLocator.configs_service.get(self.constants.player_config)["special_shot"]["message_duration"]
         for _ in range(int((duration + 0.5) * 60)):
@@ -228,6 +232,7 @@ class TestHabilidadEnPlayScene(unittest.TestCase):
 
     def test_en_pausa_el_mensaje_no_corre(self):
         self.scene.start()
+        self.scene.skip_blast_off()
         self.scene.toggle_pause()
         for _ in range(5 * 60):
             self.scene.simulate(1 / 60)

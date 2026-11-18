@@ -12,4 +12,7 @@ class SoundsService:
         return self._sounds[path]
 
     def play(self, path: str) -> None:
+        """Reproduce el sonido de path. Sin dispositivo de audio (mixer apagado) no hace nada."""
+        if pygame.mixer.get_init() is None:
+            return
         self.get(path).play()

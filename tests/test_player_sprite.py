@@ -138,6 +138,7 @@ class TestSpriteEnPlayScene(unittest.TestCase):
         self.addCleanup(ServiceLocator.fonts_service.clear)
         self.scene = self.engine._scenes["play"]
         self.scene.start()
+        self.scene.skip_blast_off()
 
     def test_al_presionar_una_flecha_la_nave_gira(self):
         world = self.scene.ecs_world

@@ -1,0 +1,17 @@
+{
+  "duration": 2.0,
+  "sound": "assets/snd/blast_off.ogg",
+  "text": {
+    "text": "BLAST OFF!",
+    "anchor": {
+      "x": 128,
+      "y": 72
+    },
+    "alignment": "CENTER",
+    "color": {
+      "r": 255,
+      "g": 230,
+      "b": 80
+    }
+  }
+}

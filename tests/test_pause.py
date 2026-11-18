@@ -108,6 +108,7 @@ class TestPlayScenePause(unittest.TestCase):
         self.addCleanup(ServiceLocator.fonts_service.clear)
         self.scene = self.engine._scenes["play"]
         self.scene.start()
+        self.scene.skip_blast_off()
         self.world = self.scene.ecs_world
         self.player = self.world.get_component(CTagPlayer)[0][0]
 
