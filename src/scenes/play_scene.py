@@ -23,6 +23,7 @@ from src.ecs.components.tags.c_tag_pause_overlay import CTagPauseOverlay
 from src.create.prefab_explosion import create_explosion_for, destroy_with_explosion
 from src.ecs.components.c_enemy import CEnemy, EnemyType
 from src.ecs.systems.s_animation import system_animation
+from src.ecs.systems.s_base_destruction import system_player_bullet_base
 from src.ecs.systems.s_camera import get_camera, system_camera, view_top_left
 from src.ecs.systems.s_debug_hitboxes import system_debug_hitboxes
 from src.ecs.systems.s_debug_labels import system_enemy_labels
@@ -112,9 +113,10 @@ class PlayScene(Scene):
         self._blast_off_text: int | None = None
         # Opción del menú de pausa a la que se vuelve desde las instrucciones o los créditos.
         self._pause_selected = 0
-        # Tecla que ya cambió la pausa en este evento. Escape es PAUSE y MENU_BACK, y Z es disparo
-        # y MENU_ACCEPT: sin esto, un mismo toque haría dos cosas (p. ej. salir del menú y disparar).
-        self._consumed_key: int | None = None
+        # El evento actual ya cambió la pausa. Escape es PAUSE y MENU_BACK, y Z (o el botón A) es
+        # disparo y MENU_ACCEPT: sin esto, un mismo toque haría dos cosas (p. ej. reanudar y disparar).
+        # Se marca el evento y no la tecla porque en el gamepad cada comando tiene su propia clave.
+        self._event_consumed = False
         self._show_hitboxes = False
         self._has_special_shot = False
         self._respawn_info: dict = {}
@@ -128,7 +130,7 @@ class PlayScene(Scene):
         self._blast_off_info = ServiceLocator.configs_service.get(constants.blast_off_config)
         self._show_hitboxes = False
         self._pause_selected = 0
-        self._consumed_key = None
+        self._event_consumed = False
         self._pause_info = ServiceLocator.configs_service.get(constants.pause_config)
         world_info = ServiceLocator.configs_service.get(constants.world_config)
         self.world_size = world_size_from_config(world_info)
@@ -163,6 +165,7 @@ class PlayScene(Scene):
         self._has_special_shot = level_info.get("special", False)
         base_info = ServiceLocator.configs_service.get(constants.base_config)
         self._bullet_info = base_info["bullet"]
+        self._base_points = base_info["points"]
         self._enemies_info = ServiceLocator.configs_service.get(constants.enemies_config)
         self._spawn_margin = ServiceLocator.configs_service.get(constants.spawner_config)["offscreen_margin"]
         # Sin player_start en el nivel, el jugador empieza en el centro de la pantalla.
@@ -231,6 +234,8 @@ class PlayScene(Scene):
         system_offscreen_despawn(self.ecs_world, camera=get_camera(self.ecs_world))
         system_enemy_bullet_collision(self.ecs_world, self.world_size)
         system_player_bullet_obstacle(self.ecs_world, self._obstacles_info, self.world_size)
+        # Después de los obstáculos: una bala que ya se gastó en uno no daña la base.
+        system_player_bullet_base(self.ecs_world, self._base_points, self.world_size)
         system_animation(self.ecs_world, delta_time)
         # Después de la animación, para que la explosión se borre justo al terminar.
         # Devuelve True si la explosión alcanzó al jugador: su muerte la maneja el área del jugador.
@@ -263,8 +268,6 @@ class PlayScene(Scene):
 
     def do_action(self, action: CInputCommand) -> None:
         constants = ServiceLocator.constants_service
-        if action.phase == CommandPhase.START and action.key == self._consumed_key:
-            return
         if action.name in constants.direction_commands:
             # También en pausa: así, al reanudar, la dirección es la de las flechas que siguen presionadas.
             held = (action.name, action.key)
@@ -273,6 +276,9 @@ class PlayScene(Scene):
             else:
                 self._held_direction_keys.discard(held)
             self._update_player_direction()
+        elif action.phase == CommandPhase.START and self._event_consumed:
+            # Esta misma pulsación ya cambió la pausa con otro comando.
+            return
         elif self.state == PlayState.STARTING:
             # Durante el BLAST OFF no se dispara ni se pausa; las flechas sí se registran (arriba)
             # para que la nave salga en la dirección que se mantiene presionada.
@@ -283,7 +289,7 @@ class PlayScene(Scene):
             self._pause_info_action(action)
         elif action.name == constants.pause_command:
             if action.phase == CommandPhase.START:
-                self._consumed_key = action.key
+                self._event_consumed = True
                 self.toggle_pause()
         elif action.name == constants.fire_command:
             if action.phase == CommandPhase.START:
@@ -359,7 +365,7 @@ class PlayScene(Scene):
             choice = selected_action(self.ecs_world)
         else:
             return
-        self._consumed_key = action.key
+        self._event_consumed = True
         self._pause_selected = get_menu(self.ecs_world).selected
         if choice == "RESUME":
             self.toggle_pause()
@@ -375,7 +381,7 @@ class PlayScene(Scene):
         constants = ServiceLocator.constants_service
         if action.phase == CommandPhase.START and action.name in (
                 constants.menu_accept_command, constants.menu_back_command, constants.pause_command):
-            self._consumed_key = action.key
+            self._event_consumed = True
             self._show_pause_menu(self._pause_selected)
 
     def _show_pause_menu(self, selected: int) -> None:
@@ -410,7 +416,7 @@ class PlayScene(Scene):
 
     def do_process_events(self, event: pygame.event.Event) -> None:
         # system_input ya repartió este evento a todos sus comandos; el siguiente empieza de cero.
-        self._consumed_key = None
+        self._event_consumed = False
         if event.type == pygame.JOYDEVICEREMOVED:
             # Solo se sueltan las direcciones del mando (claves negativas); las flechas que siguen
             # presionadas en el teclado se conservan.

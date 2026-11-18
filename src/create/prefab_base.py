@@ -6,6 +6,7 @@ import pygame
 
 from src.create.prefab_hitbox import add_hitbox
 from src.ecs.components.c_base import BaseOrientation, CBase
+from src.ecs.components.c_base_part import CBasePart
 from src.ecs.components.c_hitbox import CollisionLayer
 from src.ecs.components.c_surface import CSurface
 from src.ecs.components.c_transform import CTransform
@@ -71,6 +72,7 @@ def create_base(world: esper.World, base_info: dict, center: pygame.Vector2,
         _add_piece(world, turret, base_info["turret"], center,
                    pygame.Vector2(offset["x"], offset["y"]), orientation, CollisionLayer.BASE_TURRET)
         world.add_component(turret, CTagBaseTurret())
+        world.add_component(turret, CBasePart(base))
         world.add_component(turret, _turret_state(world, turret, base_info["turret"], orientation))
         turrets.append(turret)
 
@@ -80,6 +82,7 @@ def create_base(world: esper.World, base_info: dict, center: pygame.Vector2,
     _add_piece(world, core, core_info, center,
                pygame.Vector2(core_offset["x"], core_offset["y"]), orientation, CollisionLayer.BASE_CORE)
     world.add_component(core, CTagBaseCore())
+    world.add_component(core, CBasePart(base))
 
     world.add_component(base, CBase(orientation, turrets, core))
     return base
