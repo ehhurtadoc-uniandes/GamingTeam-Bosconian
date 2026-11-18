@@ -20,6 +20,7 @@ from src.ecs.components.c_transform import CTransform
 from src.create.prefab_explosion import create_explosion_for, destroy_with_explosion
 from src.ecs.components.c_enemy import CEnemy, EnemyType
 from src.ecs.systems.s_animation import system_animation
+from src.ecs.systems.s_base_destruction import system_player_bullet_base
 from src.ecs.systems.s_camera import get_camera, system_camera, view_top_left
 from src.ecs.systems.s_debug_hitboxes import system_debug_hitboxes
 from src.ecs.systems.s_debug_labels import system_enemy_labels
@@ -141,6 +142,7 @@ class PlayScene(Scene):
         self._has_special_shot = level_info.get("special", False)
         base_info = ServiceLocator.configs_service.get(constants.base_config)
         self._bullet_info = base_info["bullet"]
+        self._base_points = base_info["points"]
         self._enemies_info = ServiceLocator.configs_service.get(constants.enemies_config)
         self._spawn_margin = ServiceLocator.configs_service.get(constants.spawner_config)["offscreen_margin"]
         # Sin player_start en el nivel, el jugador empieza en el centro de la pantalla.
@@ -204,6 +206,8 @@ class PlayScene(Scene):
         system_offscreen_despawn(self.ecs_world, camera=get_camera(self.ecs_world))
         system_enemy_bullet_collision(self.ecs_world, self.world_size)
         system_player_bullet_obstacle(self.ecs_world, self._obstacles_info, self.world_size)
+        # Después de los obstáculos: una bala que ya se gastó en uno no daña la base.
+        system_player_bullet_base(self.ecs_world, self._base_points, self.world_size)
         system_animation(self.ecs_world, delta_time)
         # Después de la animación, para que la explosión se borre justo al terminar.
         # Devuelve True si la explosión alcanzó al jugador: su muerte la maneja el área del jugador.
