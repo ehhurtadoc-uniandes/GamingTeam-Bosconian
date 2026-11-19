@@ -13,16 +13,19 @@ os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
 import esper
 import pygame
 
+from src.create.prefab_base import create_base
 from src.create.prefab_bullet import create_turret_bullet
 from src.create.prefab_enemy import create_enemy
 from src.create.prefab_obstacle import create_mine_blast
 from src.create.prefab_player_bullet import create_player_bullet
 from src.ecs.components.c_animation import CAnimation
+from src.ecs.components.c_base import BaseOrientation, CBase
 from src.ecs.components.c_enemy import EnemyType
 from src.ecs.components.c_hitbox import CHitBox
 from src.ecs.components.c_lifetime import CLifetime
 from src.ecs.components.c_transform import CTransform
 from src.ecs.components.c_velocity import CVelocity
+from src.ecs.systems.s_base_destruction import system_player_bullet_base
 from src.ecs.systems.s_collision import hitbox_center
 from src.ecs.systems.s_enemy_bullet_collision import system_enemy_bullet_collision
 from src.ecs.systems.s_obstacles import system_mine_blast
@@ -148,6 +151,23 @@ class TestBalaDelJugadorContraEnemigos(PlayerBulletEnemyTestCase):
         self.assertTrue(self.world.entity_exists(enemy))
         system_player_bullet_enemy(self.world, world_size)
         self.assertFalse(self.world.entity_exists(enemy))
+        self.assertEqual(self.score(), 50)
+
+
+class TestOrdenConLasBases(PlayerBulletEnemyTestCase):
+    def test_bala_sobre_enemigo_y_torreta_solo_mata_al_enemigo(self):
+        with open("assets/cfg/base.json", encoding="utf-8") as f:
+            base_info = json.load(f)
+        base = create_base(self.world, base_info, V(300, 400), BaseOrientation.HORIZONTAL)
+        turret = self.world.component_for_entity(base, CBase).turrets[0]
+        turret_center = self.center(turret)
+        enemy = self.enemy(turret_center - V(4, 4))
+        create_player_bullet(self.world, BULLET_INFO, turret_center, V(1, 0))
+        # El mismo orden que en PlayScene: primero los enemigos, después las bases.
+        system_player_bullet_enemy(self.world)
+        system_player_bullet_base(self.world, base_info["points"])
+        self.assertFalse(self.world.entity_exists(enemy))
+        self.assertTrue(self.world.entity_exists(turret))
         self.assertEqual(self.score(), 50)
 
 

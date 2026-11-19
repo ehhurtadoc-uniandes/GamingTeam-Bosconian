@@ -235,11 +235,11 @@ class PlayScene(Scene):
         system_offscreen_despawn(self.ecs_world, camera=get_camera(self.ecs_world))
         system_enemy_bullet_collision(self.ecs_world, self.world_size)
         system_player_bullet_obstacle(self.ecs_world, self._obstacles_info, self.world_size)
-        # Después de los obstáculos: una bala que ya se gastó en uno no daña la base.
-        system_player_bullet_base(self.ecs_world, self._base_points, self.world_size)
-        # Después de las balas de torreta: un enemigo que ya mató una torreta no da puntos. Antes de
-        # la muerte del jugador: si la bala mata al enemigo que lo tocaba, el jugador sobrevive.
+        # Después de las balas de torreta (un enemigo que ya mató una torreta no da puntos) y de los
+        # obstáculos. Antes de la muerte del jugador: si la bala mata al enemigo que lo tocaba, sobrevive.
         system_player_bullet_enemy(self.ecs_world, self.world_size)
+        # Después de los obstáculos y los enemigos: una bala que ya se gastó en uno no daña la base.
+        system_player_bullet_base(self.ecs_world, self._base_points, self.world_size)
         system_animation(self.ecs_world, delta_time)
         # Después de la animación, para que la explosión se borre justo al terminar.
         # Devuelve True si la explosión alcanzó al jugador: su muerte la maneja el área del jugador.
