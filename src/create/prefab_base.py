@@ -1,4 +1,4 @@
-"""Creación de las bases enemigas (LC-BAS-02/03/04/05, RF-09)."""
+"""Creación de las bases enemigas (LC-BAS-02/03/04/05/06, RF-09)."""
 import random
 
 import esper
@@ -6,6 +6,7 @@ import pygame
 
 from src.create.prefab_hitbox import add_hitbox
 from src.ecs.components.c_base import BaseOrientation, CBase
+from src.ecs.components.c_base_core import CBaseCore, CoreMode, CoreState
 from src.ecs.components.c_base_part import CBasePart
 from src.ecs.components.c_hitbox import CollisionLayer
 from src.ecs.components.c_surface import CSurface
@@ -34,8 +35,77 @@ def rotate_offset(offset: pygame.Vector2, orientation: BaseOrientation) -> pygam
     return pygame.Vector2(offset)
 
 
+def parse_core_mode(level_info: dict) -> CoreMode:
+    """Modo del núcleo del nivel ("core": {"mode": ...}). Sin el bloque o sin mode, STATIC."""
+    core = level_info.get("core", {})
+    if not isinstance(core, dict):
+        raise ValueError("nivel: core debe ser un objeto, p. ej. {\"mode\": \"static\"}")
+    value = core.get("mode", CoreMode.STATIC.value)
+    try:
+        return CoreMode(value)
+    except ValueError as error:
+        valid = ", ".join(m.value for m in CoreMode)
+        raise ValueError(f"nivel: core.mode inválido '{value}' (válidos: {valid})") from error
+
+
+def core_durations(core_info: dict) -> dict[CoreState, float]:
+    """Duraciones en segundos de cada estado (base.json > core.durations), todas mayores que 0."""
+    durations = core_info.get("durations")
+    if not isinstance(durations, dict):
+        raise ValueError("base.json: core.durations falta o no es un objeto")
+    result = {}
+    for state in CoreState:
+        value = durations.get(state.value)
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or value <= 0:
+            raise ValueError(f"base.json: core.durations.{state.value} debe ser un número "
+                             f"mayor que 0 (es {value!r})")
+        result[state] = float(value)
+    return result
+
+
+def core_looks(core_info: dict) -> dict[CoreState, dict]:
+    """Configuración visual de cada estado, lista para _piece_surface.
+
+    Cada entrada de core.states trae "image" o "color" (y "size" opcional); lo que no
+    trae se toma de core (tamaño, hitbox). Sin core.states, todos los estados usan el
+    aspecto de core, como antes de #27.
+    """
+    common = {k: v for k, v in core_info.items() if k not in ("states", "durations", "image", "color")}
+    states = core_info.get("states")
+    if states is None:
+        return {state: core_info for state in CoreState}
+    if not isinstance(states, dict):
+        raise ValueError("base.json: core.states debe ser un objeto")
+    looks = {}
+    for state in CoreState:
+        field = f"base.json: core.states.{state.value}"
+        look = states.get(state.value)
+        if not isinstance(look, dict) or ("image" not in look and "color" not in look):
+            raise ValueError(f"{field} necesita \"image\" o \"color\"")
+        piece = dict(common)
+        piece.update(look)
+        if "image" not in piece:
+            color = piece.get("color")
+            if not isinstance(color, dict) or not all(channel in color for channel in ("r", "g", "b")):
+                raise ValueError(f"{field}.color necesita r, g y b")
+            if "size" not in piece or not all(k in piece["size"] for k in ("w", "h")):
+                raise ValueError(f"{field} necesita \"size\" (o core.size) con w y h")
+        looks[state] = piece
+    return looks
+
+
 def create_bases(world: esper.World, base_info: dict, level_info: dict) -> list[int]:
-    """Crea todas las bases de level_info["bases"]. Devuelve las entidades base."""
+    """Crea todas las bases de level_info["bases"]. Devuelve las entidades base.
+
+    El modo del núcleo sale de level_info["core"] y vale para todas las bases del nivel.
+    La configuración del núcleo se valida aunque el nivel no tenga bases.
+    """
+    core_mode = parse_core_mode(level_info)
+    core_looks(base_info["core"])
+    if core_mode == CoreMode.CYCLING:
+        core_durations(base_info["core"])
+    # Igual que el spawner: sin spawner.wander_scale, 1.0.
+    wander_scale = (level_info.get("spawner") or {}).get("wander_scale", 1.0)
     bases = []
     for index, entry in enumerate(level_info.get("bases", [])):
         try:
@@ -43,16 +113,19 @@ def create_bases(world: esper.World, base_info: dict, level_info: dict) -> list[
         except (KeyError, ValueError) as error:
             raise ValueError(f"nivel: base #{index}: {error}") from error
         pos = entry["pos"]
-        bases.append(create_base(world, base_info, pygame.Vector2(pos["x"], pos["y"]), orientation))
+        bases.append(create_base(world, base_info, pygame.Vector2(pos["x"], pos["y"]), orientation,
+                                 core_mode, wander_scale))
     return bases
 
 
 def create_base(world: esper.World, base_info: dict, center: pygame.Vector2,
-                orientation: BaseOrientation) -> int:
+                orientation: BaseOrientation, core_mode: CoreMode = CoreMode.STATIC,
+                wander_scale: float = 1.0) -> int:
     """Crea una base con centro en center (coordenadas de mundo): cuerpo, seis torretas y núcleo.
 
     base_info es assets/cfg/base.json. Ninguna pieza lleva CVelocity, así que los
-    sistemas de movimiento y steering no las desplazan.
+    sistemas de movimiento y steering no las desplazan. core_mode y wander_scale
+    configuran el núcleo (CBaseCore); wander_scale se usa para los E que lanza.
     """
     offsets = base_info["turret_offsets"]
     turrets_per_base = ServiceLocator.constants_service.turrets_per_base
@@ -76,16 +149,33 @@ def create_base(world: esper.World, base_info: dict, center: pygame.Vector2,
         world.add_component(turret, _turret_state(world, turret, base_info["turret"], orientation))
         turrets.append(turret)
 
-    core_info = base_info["core"]
-    core = world.create_entity()
-    core_offset = core_info.get("offset", {"x": 0, "y": 0})
-    _add_piece(world, core, core_info, center,
-               pygame.Vector2(core_offset["x"], core_offset["y"]), orientation, CollisionLayer.BASE_CORE)
-    world.add_component(core, CTagBaseCore())
-    world.add_component(core, CBasePart(base))
+    core = _create_core(world, base, base_info["core"], center, orientation, core_mode, wander_scale)
 
     world.add_component(base, CBase(orientation, turrets, core))
     return base
+
+
+def _create_core(world: esper.World, base: int, core_info: dict, center: pygame.Vector2,
+                 orientation: BaseOrientation, core_mode: CoreMode, wander_scale: float) -> int:
+    """Núcleo con su CBaseCore: abierto en STATIC, cerrado al empezar el ciclo en CYCLING."""
+    looks = core_looks(core_info)
+    if core_mode == CoreMode.CYCLING:
+        durations = core_durations(core_info)
+        state = CoreState.CLOSED
+    else:
+        durations = {}
+        state = CoreState.OPEN
+    core = world.create_entity()
+    core_offset = core_info.get("offset", {"x": 0, "y": 0})
+    _add_piece(world, core, looks[state], center,
+               pygame.Vector2(core_offset["x"], core_offset["y"]), orientation, CollisionLayer.BASE_CORE)
+    surfaces = {s: _piece_surface(look, orientation).surf for s, look in looks.items()}
+    # El estado inicial usa la superficie ya agregada, para que CSurface y CBaseCore coincidan.
+    surfaces[state] = world.component_for_entity(core, CSurface).surf
+    world.add_component(core, CTagBaseCore())
+    world.add_component(core, CBasePart(base))
+    world.add_component(core, CBaseCore(base, core_mode, state, durations, surfaces, wander_scale))
+    return core
 
 
 def _turret_state(world: esper.World, turret: int, turret_info: dict,

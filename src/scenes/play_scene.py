@@ -27,6 +27,7 @@ from src.ecs.components.tags.c_tag_pause_overlay import CTagPauseOverlay
 from src.create.prefab_explosion import create_explosion_for, destroy_with_explosion
 from src.ecs.components.c_enemy import CEnemy, EnemyType
 from src.ecs.systems.s_animation import system_animation
+from src.ecs.systems.s_base_core import system_base_core
 from src.ecs.systems.s_base_destruction import system_player_bullet_base
 from src.ecs.systems.s_camera import get_camera, system_camera, view_top_left
 from src.ecs.systems.s_debug_hitboxes import system_debug_hitboxes
@@ -240,6 +241,8 @@ class PlayScene(Scene):
         # Los enemigos nuevos salen fuera de lo que ve la cámara (centrada en el jugador antes de moverse).
         system_enemy_spawner(self.ecs_world, delta_time, get_camera(self.ecs_world),
                              self._enemies_info, self._spawn_margin)
+        # Los núcleos lanzan sus E antes del estado, para que el E nuevo apunte (AIM) en este paso.
+        system_base_core(self.ecs_world, delta_time, self._enemies_info)
         system_enemy_state(self.ecs_world, delta_time, player_pos, self.world_size)
         system_steering(self.ecs_world, delta_time, player_pos, self.world_size)
         # Las torretas disparan antes del movimiento para que la bala nueva avance en este frame.
