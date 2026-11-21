@@ -16,7 +16,10 @@ from src.engine.service_locator import ServiceLocator
 
 
 def is_vulnerable(world: esper.World, player: int) -> bool:
+    # Con la trampa de invencibilidad (#40) nada mata al jugador.
+    invincible = ServiceLocator.cheats_service.is_active(ServiceLocator.constants_service.cheat_invincible)
     return (world.entity_exists(player)
+            and not invincible
             and not world.has_component(player, CPlayerDead)
             and not world.has_component(player, CPlayerInvulnerable))
 

@@ -1,0 +1,24 @@
+{
+  "enabled": true,
+  "score_points": 10000,
+  "message_duration": 1.5,
+  "message": {
+    "anchor": {
+      "x": 128,
+      "y": 184
+    },
+    "alignment": "CENTER",
+    "color": {
+      "r": 120,
+      "g": 255,
+      "b": 120
+    }
+  },
+  "on_text": "SI",
+  "off_text": "NO",
+  "messages": {
+    "INVINCIBLE": "INVENCIBLE: {state}",
+    "SPECIAL_SHOT": "DISPARO ESPECIAL: {state}",
+    "SCORE": "+{points} PUNTOS"
+  }
+}
