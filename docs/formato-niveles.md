@@ -34,15 +34,31 @@ hoy 1024 x 1536) y son el **centro** de lo que se crea.
 | `obstacles.min_distance` | no | Distancia mínima entre obstáculos, bases e inicio del jugador (por defecto 32). |
 | `obstacles.rock` / `solid_rock` / `mine` | no | Cantidad de rocas, rocas indestructibles y minas. |
 
-Los tipos de obstáculo (imágenes, puntos, hitbox, animación y explosión de la mina) están en
-`assets/cfg/obstacles.json`.
+Los tipos de obstáculo (imágenes, puntos, hitbox, animación, explosión de la mina y rapidez
+de la roca indestructible, `speed`) están en `assets/cfg/obstacles.json`.
 
-## Claves que vienen después (semana 3)
+## levels.json
 
-Se agregarán sin romper los niveles que ya existen:
+```json
+{
+  "clear_delay": 2.0,
+  "round_hud": { "label": { "...": "texto ROUND" }, "value": { "...": "número" } },
+  "levels": ["assets/cfg/levels/level_01.json", "..."]
+}
+```
 
-- `round`: número de ronda que muestra la interfaz "ROUND X".
+| Clave | Qué es |
+|---|---|
+| `levels` | Los niveles en orden. La ronda que se muestra es la posición en esta lista (la primera es la ronda 1). |
+| `clear_delay` | Segundos que se espera, al destruir todas las bases, antes de pasar a la siguiente ronda (para que terminen las explosiones). |
+| `round_hud` | Texto "ROUND" y su número, abajo en la columna del HUD: `anchor`, `alignment` y `color` de cada uno. |
+
+Después de la última ronda se vuelve al título mientras no exista la escena de victoria (#36).
+`level_test.json` ya no está en la lista; queda como nivel de prueba.
+
+## Claves que pueden venir después
+
 - `music`: ruta de la música del nivel.
-- `core`: `normal` o `animated`, y si trae enemigo E.
+- `core`: `normal` o `animated`, y si trae enemigo E (LC-BAS-06.1).
 
 Si su área necesita otra clave en el nivel, avísenle a Catalina para agregarla aquí.

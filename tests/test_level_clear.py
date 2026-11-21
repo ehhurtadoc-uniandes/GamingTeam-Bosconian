@@ -77,5 +77,33 @@ class TestLevelClear(unittest.TestCase):
         self.assertEqual(self.game_state.score, 1234)
 
 
+
+class TestLosDiezNiveles(unittest.TestCase):
+    """Cada ronda de levels.json arranca con sus bases y obstáculos (LC-EG-03, #39)."""
+
+    def setUp(self):
+        warnings.filterwarnings("ignore", message="no fast renderer")
+        self.engine = GameEngine()
+        self.addCleanup(pygame.quit)
+        self.addCleanup(ServiceLocator.fonts_service.clear)
+        self.addCleanup(setattr, ServiceLocator.game_state_service, "level_index", 0)
+        levels = ServiceLocator.configs_service.get(ServiceLocator.constants_service.levels_config)
+        self.paths = levels["levels"]
+
+    def test_hay_al_menos_diez_niveles(self):
+        self.assertGreaterEqual(len(self.paths), 10)
+
+    def test_cada_nivel_arranca_con_sus_bases(self):
+        scene = self.engine._scenes["play"]
+        for index, path in enumerate(self.paths):
+            with self.subTest(nivel=path):
+                ServiceLocator.game_state_service.level_index = index
+                scene.start()
+                expected = len(ServiceLocator.configs_service.get(path)["bases"])
+                self.assertEqual(len(scene.ecs_world.get_component(CTagBase)), expected)
+                self.assertIn(str(index + 1), [c.text for _, c in scene.ecs_world.get_component(CText)])
+                scene.clean()
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -13,5 +13,16 @@
       "color": { "r": 255, "g": 255, "b": 255 }
     }
   },
-  "levels": ["assets/cfg/levels/level_test.json"]
+  "levels": [
+    "assets/cfg/levels/level_01.json",
+    "assets/cfg/levels/level_02.json",
+    "assets/cfg/levels/level_03.json",
+    "assets/cfg/levels/level_04.json",
+    "assets/cfg/levels/level_05.json",
+    "assets/cfg/levels/level_06.json",
+    "assets/cfg/levels/level_07.json",
+    "assets/cfg/levels/level_08.json",
+    "assets/cfg/levels/level_09.json",
+    "assets/cfg/levels/level_10.json"
+  ]
 }
