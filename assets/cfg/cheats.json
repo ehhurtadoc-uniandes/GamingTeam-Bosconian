@@ -17,6 +17,7 @@
   "on_text": "SI",
   "off_text": "NO",
   "messages": {
+    "NEXT_LEVEL": "RONDA {level}",
     "INVINCIBLE": "INVENCIBLE: {state}",
     "SPECIAL_SHOT": "DISPARO ESPECIAL: {state}",
     "SCORE": "+{points} PUNTOS"

@@ -11,7 +11,7 @@ import pygame
 from src.ecs.components.c_special_shot import CSpecialShot
 from src.ecs.components.c_text import CText
 from src.ecs.components.tags.c_tag_player import CTagPlayer
-from src.ecs.systems.s_player_death import is_vulnerable
+from src.ecs.systems.s_player_death import is_vulnerable, kill_player
 from src.engine.game_engine import GameEngine
 from src.engine.service_locator import ServiceLocator
 from src.engine.services.cheats_service import CheatsService
@@ -136,6 +136,29 @@ class TestCheatsEnPlayScene(unittest.TestCase):
         self.press(pygame.K_n)
         self.assertEqual(self.engine._scene_name_to_switch, "play")
         self.assertEqual(ServiceLocator.game_state_service.level_index, 1 % len(levels))
+
+    def test_n_avisa_la_ronda_en_la_escena_nueva(self):
+        levels = ServiceLocator.configs_service.get(ServiceLocator.constants_service.levels_config)["levels"]
+        self.engine._current_scene = self.scene
+        self.press(pygame.K_n)
+        self.engine._handle_switch_scene()
+        self.world = self.scene.ecs_world
+        self.assertIn(f"RONDA {1 % len(levels) + 1}", self.texts())
+
+    def test_n_no_salta_de_ronda_con_el_jugador_muerto(self):
+        level_index = ServiceLocator.game_state_service.level_index
+        kill_player(self.world, self.player, self.scene._respawn_info)
+        self.press(pygame.K_n)
+        self.assertIsNone(self.engine._scene_name_to_switch)
+        self.assertEqual(ServiceLocator.game_state_service.level_index, level_index)
+
+    def test_solo_se_ve_un_aviso_a_la_vez(self):
+        self.press(pygame.K_i)
+        self.press(pygame.K_i)
+        self.assertNotIn("INVENCIBLE: SI", self.texts())
+        self.assertIn("INVENCIBLE: NO", self.texts())
+        self.press(pygame.K_j)
+        self.assertNotIn("INVENCIBLE: NO", self.texts())
 
     def test_el_mensaje_desaparece_con_el_tiempo(self):
         self.press(pygame.K_i)

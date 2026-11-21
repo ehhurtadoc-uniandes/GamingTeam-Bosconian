@@ -102,8 +102,8 @@ Atajos para ver rápido todas las características del juego. Funcionan durante 
 
 | Tecla | Trampa |
 | ----- | ------ |
-| `N`   | Pasar a la siguiente ronda (después de la última vuelve a la primera) |
-| `I`   | Invencible: nada mata al jugador (activar / desactivar) |
+| `N`   | Pasar a la siguiente ronda (después de la última vuelve a la primera). No funciona con la nave explotando |
+| `I`   | Invencible: nada mata al jugador y la nave atraviesa enemigos, balas y obstáculos (activar / desactivar) |
 | `O`   | Disparo especial aunque la ronda no lo dé (activar / desactivar) |
 | `J`   | Sumar 10.000 puntos, para ver las vidas extra y el HI-SCORE |
 

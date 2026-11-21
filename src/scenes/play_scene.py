@@ -20,6 +20,7 @@ from src.ecs.components.c_surface import CSurface
 from src.ecs.components.c_transform import CTransform
 from src.ecs.components.c_lifetime import CLifetime
 from src.ecs.components.c_menu_item import CMenuItem
+from src.ecs.components.c_player_dead import CPlayerDead
 from src.ecs.components.c_special_shot import CSpecialShot
 from src.ecs.components.tags.c_tag_hide_on_pause import CTagHideOnPause
 from src.ecs.components.tags.c_tag_pause_overlay import CTagPauseOverlay
@@ -114,6 +115,10 @@ class PlayScene(Scene):
         self._pause_info: dict = {}
         self._blast_off_info: dict = {}
         self._cheats_info: dict = {}
+        # Aviso de trampa en pantalla (uno a la vez) y el que se muestra al empezar la ronda
+        # siguiente, para la trampa que cambia de ronda: (trampa, valores del texto).
+        self._cheat_message: int | None = None
+        self._pending_cheat_message: tuple[str, dict] | None = None
         # Modo trampa (#40): nombre de la trampa (ConstantsService.cheat_commands) -> qué hace.
         self._cheat_actions = {
             "NEXT_LEVEL": self._cheat_next_level,
@@ -169,6 +174,11 @@ class PlayScene(Scene):
         create_lives_hud(self.ecs_world, score_info["lives"]["hud"])
         create_minimap(self.ecs_world, ServiceLocator.configs_service.get(constants.minimap_config))
         self._start_blast_off()
+        self._cheat_message = None
+        if self._pending_cheat_message is not None:
+            cheat, values = self._pending_cheat_message
+            self._pending_cheat_message = None
+            self._show_cheat_message(cheat, **values)
 
     def _create_level(self) -> None:
         """Crea las entidades del nivel actual según su JSON: bases, spawner de enemigos y obstáculos.
@@ -363,10 +373,18 @@ class PlayScene(Scene):
             self.state = PlayState.PLAYING
 
     def _cheat_next_level(self) -> None:
-        """Trampa: pasa a la siguiente ronda; después de la última vuelve a la primera."""
+        """Trampa: pasa a la siguiente ronda; después de la última vuelve a la primera.
+
+        Con el jugador muerto no hace nada: si no le quedaban vidas, saltar de ronda evitaría la derrota.
+        El aviso se muestra en la ronda nueva, porque el cambio de escena borra el mundo actual.
+        """
+        if self.ecs_world.has_component(self._player_entity, CPlayerDead):
+            return
         levels = ServiceLocator.configs_service.get(ServiceLocator.constants_service.levels_config)["levels"]
         game_state = ServiceLocator.game_state_service
         game_state.level_index = (game_state.level_index + 1) % len(levels)
+        # La ronda se muestra desde 1, como en el título.
+        self._pending_cheat_message = ("NEXT_LEVEL", {"level": game_state.level_index + 1})
         self.switch_scene(ServiceLocator.constants_service.play_scene)
 
     def _cheat_invincible(self) -> None:
@@ -396,11 +414,17 @@ class PlayScene(Scene):
         return self._cheats_info["on_text"] if active else self._cheats_info["off_text"]
 
     def _show_cheat_message(self, cheat: str, **values) -> None:
-        """Muestra unos segundos qué trampa se usó, con el texto de cheats.json."""
+        """Muestra unos segundos qué trampa se usó, con el texto de cheats.json.
+
+        Reemplaza el aviso anterior: si no, al presionar dos trampas seguidas se verían encimados.
+        """
+        if self._cheat_message is not None and self.ecs_world.entity_exists(self._cheat_message):
+            self.ecs_world.delete_entity(self._cheat_message, immediate=True)
         text = self._cheats_info["messages"][cheat].format(**values)
         message = create_interface_text(self.ecs_world, text, self._cheats_info["message"])
         self.ecs_world.add_component(message, CLifetime(self._cheats_info["message_duration"]))
         self.ecs_world.add_component(message, CTagHideOnPause())
+        self._cheat_message = message
 
     def toggle_pause(self) -> None:
         """Pausa o reanuda (LC-ESC-04.3): esconde el mundo y el minimapa y muestra el menú de pausa."""
