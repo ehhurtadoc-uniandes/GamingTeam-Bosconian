@@ -2,6 +2,7 @@ import esper
 import pygame
 
 from src.ecs.components.c_hitbox import CHitBox, CollisionLayer
+from src.ecs.components.c_leaving_base import CLeavingBase
 from src.ecs.components.c_transform import CTransform
 from src.ecs.components.c_velocity import CVelocity
 from src.ecs.systems.s_collision import hitbox_center, system_collision
@@ -62,13 +63,31 @@ def system_enemy_bounce(world: esper.World, world_size: pygame.Vector2 | None = 
     Separar una pareja puede meter a un enemigo en otro o en una base que no estaban
     en la lista de choques. Por eso se vuelve a detectar y resolver hasta que no
     quede ningún solape, con un máximo de max_passes pasadas por paso.
+
+    Un enemigo con CLeavingBase (el E que sale de un núcleo) no rebota contra su propia
+    base; en cuanto deja de tocarla se le quita CLeavingBase y vuelve a rebotar como todos.
     """
-    for _ in range(max_passes):
+    leaving = {enemy: c_lb.base for enemy, c_lb in world.get_component(CLeavingBase)}
+    for pass_index in range(max_passes):
         collisions = system_collision(world, [ENEMY_ENEMY_PAIR, ENEMY_BASE_PAIR], world_size)
-        if not collisions[ENEMY_ENEMY_PAIR] and not collisions[ENEMY_BASE_PAIR]:
+        base_pairs = [(enemy, base) for enemy, base in collisions[ENEMY_BASE_PAIR]
+                      if leaving.get(enemy) != base]
+        if pass_index == 0:
+            _finish_leaving(world, leaving, collisions[ENEMY_BASE_PAIR])
+        if not collisions[ENEMY_ENEMY_PAIR] and not base_pairs:
             return
         for enemy_a, enemy_b in collisions[ENEMY_ENEMY_PAIR]:
             _bounce(world, enemy_a, enemy_b, True, world_size)
         # Las bases van al final: como no se mueven, su corrección es la que queda.
-        for enemy, base in collisions[ENEMY_BASE_PAIR]:
+        for enemy, base in base_pairs:
             _bounce(world, enemy, base, False, world_size)
+
+
+def _finish_leaving(world: esper.World, leaving: dict[int, int],
+                    base_pairs: list[tuple[int, int]]) -> None:
+    """Quita CLeavingBase a los enemigos que ya no tocan la base de la que salieron."""
+    touching = set(base_pairs)
+    for enemy, base in list(leaving.items()):
+        if (enemy, base) not in touching:
+            world.remove_component(enemy, CLeavingBase)
+            del leaving[enemy]

@@ -21,12 +21,16 @@ from src.ecs.components.c_enemy import CEnemy, EnemyType
 from src.ecs.components.c_enemy_spawner import CEnemySpawner
 from src.ecs.components.c_enemy_state import CEnemyState, EnemyState
 from src.ecs.components.c_hitbox import CHitBox
+from src.ecs.components.c_leaving_base import CLeavingBase
 from src.ecs.components.c_surface import CSurface
 from src.ecs.components.c_transform import CTransform
 from src.ecs.components.c_velocity import CVelocity
+from src.create.prefab_enemy import create_enemy
 from src.ecs.systems.s_base_core import system_base_core
+from src.ecs.systems.s_enemy_bounce import system_enemy_bounce
 from src.ecs.systems.s_enemy_spawner import system_enemy_spawner
 from src.ecs.systems.s_enemy_state import system_enemy_state
+from src.ecs.systems.s_movement import system_movement
 from src.engine.game_engine import GameEngine
 from src.engine.service_locator import ServiceLocator
 from tests.test_base import BASE_INFO, center_of
@@ -266,6 +270,55 @@ class TestAimDelE(CoreTestCase):
         enemy = self.launch(center=(10, 80))
         system_enemy_state(self.world, 0.0, pygame.Vector2(240, 76), WORLD_SIZE)
         self.assertLess(self.world.component_for_entity(enemy, CVelocity).vel.x, 0)
+
+
+class TestSalidaDeLaBase(CoreTestCase):
+    """El E nace dentro del cuerpo de su base: debe salir hacia el jugador sin rebotar en ella."""
+
+    def run_steps(self, target, steps):
+        for _ in range(steps):
+            system_enemy_state(self.world, 1 / 60, pygame.Vector2(target))
+            system_movement(self.world, 1 / 60)
+            system_enemy_bounce(self.world)
+            self.world._clear_dead_entities()
+
+    def test_sale_hacia_el_jugador_sin_saltar_al_borde_ni_invertir_el_rumbo(self):
+        # La E está en (96, 76) al nacer (centro del núcleo en (100, 80)).
+        for target, direction in [((96, 200), (0, 1)), ((96, -100), (0, -1)), ((250, 76), (1, 0))]:
+            with self.subTest(target=target):
+                self.world = esper.World()
+                self.make_base()
+                enemy = self.step(2.5)[0]
+                start = pygame.Vector2(self.world.component_for_entity(enemy, CTransform).pos)
+                self.run_steps(target, 1)
+                moved = self.world.component_for_entity(enemy, CTransform).pos - start
+                speed = self.world.component_for_entity(enemy, CVelocity).vel.length()
+                # Un paso de movimiento normal, sin empujones de system_enemy_bounce.
+                self.assertAlmostEqual(moved.length(), speed / 60, places=4)
+                self.assertGreater(moved.dot(pygame.Vector2(direction)), 0)
+                self.run_steps(target, 40)
+                self.assertGreater(self.world.component_for_entity(enemy, CVelocity).vel
+                                   .dot(pygame.Vector2(direction)), 0)
+                self.assertFalse(self.world.has_component(enemy, CLeavingBase))
+
+    def test_al_salir_vuelve_a_rebotar_contra_la_base(self):
+        self.make_base()
+        enemy = self.step(2.5)[0]
+        self.assertTrue(self.world.has_component(enemy, CLeavingBase))
+        self.run_steps((96, 200), 40)
+        self.assertFalse(self.world.has_component(enemy, CLeavingBase))
+        # Si se le hace volver hacia la base, rebota como cualquier enemigo.
+        self.world.component_for_entity(enemy, CVelocity).vel = pygame.Vector2(0, -100)
+        for _ in range(60):
+            system_movement(self.world, 1 / 60)
+            system_enemy_bounce(self.world)
+        self.assertGreater(self.world.component_for_entity(enemy, CVelocity).vel.y, 0)
+
+    def test_otro_enemigo_dentro_de_la_base_sigue_rebotando(self):
+        self.make_base()
+        other = create_enemy(self.world, self.enemies_info, pygame.Vector2(96, 76), EnemyType.E)
+        system_enemy_bounce(self.world)
+        self.assertNotEqual(self.world.component_for_entity(other, CTransform).pos, (96, 76))
 
 
 class TestErroresDeConfiguracion(CoreTestCase):

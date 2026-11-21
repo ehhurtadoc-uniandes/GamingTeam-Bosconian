@@ -13,6 +13,7 @@ from src.ecs.components.c_base import CBase
 from src.ecs.components.c_base_core import CBaseCore, CoreMode, CoreState, NEXT_CORE_STATE
 from src.ecs.components.c_enemy import EnemyType
 from src.ecs.components.c_hitbox import CHitBox
+from src.ecs.components.c_leaving_base import CLeavingBase
 from src.ecs.components.c_surface import CSurface
 from src.ecs.components.c_transform import CTransform
 
@@ -39,8 +40,8 @@ def system_base_core(world: esper.World, delta_time: float, enemies_info: dict) 
             c_core.time_in_state -= c_core.durations[c_core.state]
             c_core.state = NEXT_CORE_STATE[c_core.state]
             if c_core.state == CoreState.OPEN:
-                created.append(_launch_enemy(world, center_of_core(c_t, c_s), enemies_info,
-                                             c_core.wander_scale))
+                created.append(_launch_enemy(world, c_core.base, center_of_core(c_t, c_s),
+                                             enemies_info, c_core.wander_scale))
         if c_core.state != previous_state:
             set_core_surface(world, core, c_core.surfaces[c_core.state])
     return created
@@ -70,9 +71,12 @@ def _belongs_to_live_base(world: esper.World, core: int, c_core: CBaseCore) -> b
     return world.component_for_entity(c_core.base, CBase).core == core
 
 
-def _launch_enemy(world: esper.World, center: pygame.Vector2, enemies_info: dict,
+def _launch_enemy(world: esper.World, base: int, center: pygame.Vector2, enemies_info: dict,
                   wander_scale: float) -> int:
     # create_enemy recibe la esquina superior izquierda: se resta la mitad del tamaño del E.
     size = enemies_info[EnemyType.E.value]["size"]
     pos = center - pygame.Vector2(size["w"], size["h"]) / 2
-    return create_enemy(world, enemies_info, pos, EnemyType.E, wander_scale=wander_scale)
+    enemy = create_enemy(world, enemies_info, pos, EnemyType.E, wander_scale=wander_scale)
+    # Nace dentro del cuerpo de su base: no debe rebotar contra ella hasta haber salido.
+    world.add_component(enemy, CLeavingBase(base))
+    return enemy
