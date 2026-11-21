@@ -1,21 +1,70 @@
 {
+  "continue_time": 5,
   "title": {
     "text": "FIN DEL JUEGO",
-    "anchor": { "x": 128, "y": 90 },
+    "anchor": {
+      "x": 128,
+      "y": 64
+    },
     "alignment": "CENTER",
-    "color": { "r": 255, "g": 60, "b": 60 }
+    "color": {
+      "r": 255,
+      "g": 60,
+      "b": 60
+    }
+  },
+  "countdown": {
+    "text": "CONTINUAR? {seconds}",
+    "anchor": {
+      "x": 128,
+      "y": 92
+    },
+    "alignment": "CENTER",
+    "color": {
+      "r": 255,
+      "g": 255,
+      "b": 255
+    }
+  },
+  "menu": {
+    "anchor": {
+      "x": 128,
+      "y": 116
+    },
+    "line_height": 14,
+    "alignment": "CENTER",
+    "color": {
+      "r": 255,
+      "g": 255,
+      "b": 255
+    },
+    "selected_color": {
+      "r": 255,
+      "g": 230,
+      "b": 80
+    },
+    "options": [
+      {
+        "text": "SI",
+        "action": "CONTINUE"
+      },
+      {
+        "text": "NO",
+        "action": "QUIT"
+      }
+    ]
   },
   "hint": {
-    "text": "Z: VOLVER",
-    "anchor": { "x": 128, "y": 188 },
+    "text": "Z: ACEPTAR",
+    "anchor": {
+      "x": 128,
+      "y": 188
+    },
     "alignment": "CENTER",
-    "color": { "r": 120, "g": 120, "b": 120 }
-  },
-  "lines": {
-    "anchor": { "x": 128, "y": 120 },
-    "line_height": 12,
-    "alignment": "CENTER",
-    "color": { "r": 255, "g": 255, "b": 255 },
-    "text": []
+    "color": {
+      "r": 120,
+      "g": 120,
+      "b": 120
+    }
   }
 }
