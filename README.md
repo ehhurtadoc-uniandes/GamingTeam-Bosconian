@@ -98,7 +98,29 @@ El juego se publicará en [itch.io](https://itch.io). Enlace: *pendiente*.
 
 ## Modo trampa
 
-*Pendiente.* Aquí se documentarán los atajos para acceder rápido a todas las características del juego (saltar de nivel, invencibilidad, etc.).
+Atajos para ver rápido todas las características del juego. Funcionan durante la partida (no en pausa ni durante el "BLAST OFF!") y se activan o desactivan en `assets/cfg/cheats.json` con `"enabled"`. Al usar una trampa se muestra un aviso abajo en la pantalla.
+
+| Tecla | Trampa |
+| ----- | ------ |
+| `N`   | Pasar a la siguiente ronda (después de la última vuelve a la primera). No funciona con la nave explotando |
+| `I`   | Invencible: nada mata al jugador y la nave atraviesa enemigos, balas y obstáculos (activar / desactivar) |
+| `O`   | Disparo especial aunque la ronda no lo dé (activar / desactivar) |
+| `J`   | Sumar 10.000 puntos, para ver las vidas extra y el HI-SCORE |
+
+Las trampas activas siguen activas al cambiar de ronda, al reaparecer y al continuar.
+
+En la escena de título también se puede **elegir la ronda** con izquierda y derecha sobre `< RONDA n >`.
+
+### Teclas de depuración
+
+Con `"enabled": true` en `assets/cfg/debug.json`:
+
+| Tecla | Acción |
+| ----- | ------ |
+| `1` `2` `3` | Crear un enemigo I, P o E en el borde de la pantalla |
+| `H`   | Mostrar u ocultar las hitbox |
+| `K`   | Hacer explotar al jugador y a los enemigos |
+| `L`   | Matar al jugador (pierde una vida) |
 
 ## Créditos y recursos
 

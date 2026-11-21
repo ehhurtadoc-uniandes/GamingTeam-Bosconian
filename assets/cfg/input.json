@@ -17,5 +17,9 @@
   "DEBUG_SPAWN_E": ["3", "[3]"],
   "DEBUG_HITBOXES": ["h"],
   "DEBUG_EXPLODE": ["k"],
-  "DEBUG_KILL": ["l"]
+  "DEBUG_KILL": ["l"],
+  "CHEAT_NEXT_LEVEL": ["n"],
+  "CHEAT_INVINCIBLE": ["i"],
+  "CHEAT_SPECIAL_SHOT": ["o"],
+  "CHEAT_SCORE": ["j"]
 }

@@ -28,6 +28,7 @@ class ConstantsService:
         self.instructions_config = "assets/cfg/instructions.json"
         self.credits_config = "assets/cfg/credits.json"
         self.blast_off_config = "assets/cfg/blast_off.json"
+        self.cheats_config = "assets/cfg/cheats.json"
         self.pause_config = "assets/cfg/pause.json"
         self.explosions_config = "assets/cfg/explosions.json"
         self.defeat_config = "assets/cfg/defeat.json"
@@ -74,6 +75,16 @@ class ConstantsService:
         self.debug_hitboxes_command = "DEBUG_HITBOXES"
         self.debug_explode_command = "DEBUG_EXPLODE"
         self.debug_kill_command = "DEBUG_KILL"
+        # Modo trampa (#40): comando de input.json -> nombre de la trampa. Cada área agrega aquí
+        # el comando de su trampa y su acción en PlayScene._cheat_actions.
+        self.cheat_commands = {
+            "CHEAT_NEXT_LEVEL": "NEXT_LEVEL",
+            "CHEAT_INVINCIBLE": "INVINCIBLE",
+            "CHEAT_SPECIAL_SHOT": "SPECIAL_SHOT",
+            "CHEAT_SCORE": "SCORE",
+        }
+        self.cheat_invincible = "INVINCIBLE"
+        self.cheat_special_shot = "SPECIAL_SHOT"
         # Con el modo de depuración, estas teclas crean enemigos (valor de EnemyType) a pedido,
         # además de los del spawner (#28).
         self.debug_spawn_commands = {

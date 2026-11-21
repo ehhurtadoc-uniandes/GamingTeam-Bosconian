@@ -18,7 +18,11 @@ from src.create.prefab_text import create_interface_text
 from src.ecs.components.c_input_command import CInputCommand, CommandPhase
 from src.ecs.components.c_surface import CSurface
 from src.ecs.components.c_transform import CTransform
+from src.ecs.components.c_lifetime import CLifetime
 from src.ecs.components.c_menu_item import CMenuItem
+from src.ecs.components.c_player_dead import CPlayerDead
+from src.ecs.components.c_special_shot import CSpecialShot
+from src.ecs.components.tags.c_tag_hide_on_pause import CTagHideOnPause
 from src.ecs.components.tags.c_tag_pause_overlay import CTagPauseOverlay
 from src.create.prefab_explosion import create_explosion_for, destroy_with_explosion
 from src.ecs.components.c_enemy import CEnemy, EnemyType
@@ -110,6 +114,18 @@ class PlayScene(Scene):
         self.state = PlayState.PLAYING
         self._pause_info: dict = {}
         self._blast_off_info: dict = {}
+        self._cheats_info: dict = {}
+        # Aviso de trampa en pantalla (uno a la vez) y el que se muestra al empezar la ronda
+        # siguiente, para la trampa que cambia de ronda: (trampa, valores del texto).
+        self._cheat_message: int | None = None
+        self._pending_cheat_message: tuple[str, dict] | None = None
+        # Modo trampa (#40): nombre de la trampa (ConstantsService.cheat_commands) -> qué hace.
+        self._cheat_actions = {
+            "NEXT_LEVEL": self._cheat_next_level,
+            "INVINCIBLE": self._cheat_invincible,
+            "SPECIAL_SHOT": self._cheat_special_shot,
+            "SCORE": self._cheat_score,
+        }
         self._blast_off_time = 0.0
         self._blast_off_text: int | None = None
         # Opción del menú de pausa a la que se vuelve desde las instrucciones o los créditos.
@@ -129,6 +145,7 @@ class PlayScene(Scene):
         self.level_index = ServiceLocator.game_state_service.level_index
         self.state = PlayState.PLAYING
         self._blast_off_info = ServiceLocator.configs_service.get(constants.blast_off_config)
+        self._cheats_info = ServiceLocator.configs_service.get(constants.cheats_config)
         self._show_hitboxes = False
         self._pause_selected = 0
         self._event_consumed = False
@@ -141,7 +158,10 @@ class PlayScene(Scene):
         size = player_info["size"]
         pos = self._player_start - pygame.Vector2(size["w"], size["h"]) / 2
         self._player_spawn_pos = pygame.Vector2(pos)
-        self._player_entity = create_player(self.ecs_world, player_info, pos, self._has_special_shot)
+        # El disparo especial lo da el nivel o la trampa (#40); el mensaje solo sale si lo da el nivel.
+        special_cheat = ServiceLocator.cheats_service.is_active(constants.cheat_special_shot)
+        self._player_entity = create_player(self.ecs_world, player_info, pos,
+                                            self._has_special_shot or special_cheat)
         if self._has_special_shot:
             create_special_shot_message(self.ecs_world, player_info["special_shot"])
         player_center = pos + pygame.Vector2(size["w"], size["h"]) / 2
@@ -154,6 +174,11 @@ class PlayScene(Scene):
         create_lives_hud(self.ecs_world, score_info["lives"]["hud"])
         create_minimap(self.ecs_world, ServiceLocator.configs_service.get(constants.minimap_config))
         self._start_blast_off()
+        self._cheat_message = None
+        if self._pending_cheat_message is not None:
+            cheat, values = self._pending_cheat_message
+            self._pending_cheat_message = None
+            self._show_cheat_message(cheat, **values)
 
     def _create_level(self) -> None:
         """Crea las entidades del nivel actual según su JSON: bases, spawner de enemigos y obstáculos.
@@ -295,6 +320,9 @@ class PlayScene(Scene):
             if action.phase == CommandPhase.START:
                 self._event_consumed = True
                 self.toggle_pause()
+        elif action.name in constants.cheat_commands:
+            if action.phase == CommandPhase.START and ServiceLocator.cheats_service.enabled:
+                self._cheat_actions[constants.cheat_commands[action.name]]()
         elif action.name == constants.fire_command:
             if action.phase == CommandPhase.START:
                 system_player_fire(self.ecs_world)
@@ -343,6 +371,60 @@ class PlayScene(Scene):
             self.ecs_world.delete_entity(self._blast_off_text, immediate=True)
             self._blast_off_text = None
             self.state = PlayState.PLAYING
+
+    def _cheat_next_level(self) -> None:
+        """Trampa: pasa a la siguiente ronda; después de la última vuelve a la primera.
+
+        Con el jugador muerto no hace nada: si no le quedaban vidas, saltar de ronda evitaría la derrota.
+        El aviso se muestra en la ronda nueva, porque el cambio de escena borra el mundo actual.
+        """
+        if self.ecs_world.has_component(self._player_entity, CPlayerDead):
+            return
+        levels = ServiceLocator.configs_service.get(ServiceLocator.constants_service.levels_config)["levels"]
+        game_state = ServiceLocator.game_state_service
+        game_state.level_index = (game_state.level_index + 1) % len(levels)
+        # La ronda se muestra desde 1, como en el título.
+        self._pending_cheat_message = ("NEXT_LEVEL", {"level": game_state.level_index + 1})
+        self.switch_scene(ServiceLocator.constants_service.play_scene)
+
+    def _cheat_invincible(self) -> None:
+        """Trampa: nada mata al jugador (ver is_vulnerable)."""
+        active = ServiceLocator.cheats_service.toggle(ServiceLocator.constants_service.cheat_invincible)
+        self._show_cheat_message("INVINCIBLE", state=self._on_off(active))
+
+    def _cheat_special_shot(self) -> None:
+        """Trampa: da o quita el disparo especial, aunque el nivel no lo dé."""
+        constants = ServiceLocator.constants_service
+        active = ServiceLocator.cheats_service.toggle(constants.cheat_special_shot)
+        if active and not self.ecs_world.has_component(self._player_entity, CSpecialShot):
+            special_info = ServiceLocator.configs_service.get(constants.player_config)["special_shot"]
+            self.ecs_world.add_component(self._player_entity, CSpecialShot(special_info))
+        elif not active and not self._has_special_shot:
+            if self.ecs_world.has_component(self._player_entity, CSpecialShot):
+                self.ecs_world.remove_component(self._player_entity, CSpecialShot)
+        self._show_cheat_message("SPECIAL_SHOT", state=self._on_off(active))
+
+    def _cheat_score(self) -> None:
+        """Trampa: suma puntos, para ver las vidas extra y el HI-SCORE."""
+        points = self._cheats_info["score_points"]
+        ServiceLocator.game_state_service.add_score(points)
+        self._show_cheat_message("SCORE", points=points)
+
+    def _on_off(self, active: bool) -> str:
+        return self._cheats_info["on_text"] if active else self._cheats_info["off_text"]
+
+    def _show_cheat_message(self, cheat: str, **values) -> None:
+        """Muestra unos segundos qué trampa se usó, con el texto de cheats.json.
+
+        Reemplaza el aviso anterior: si no, al presionar dos trampas seguidas se verían encimados.
+        """
+        if self._cheat_message is not None and self.ecs_world.entity_exists(self._cheat_message):
+            self.ecs_world.delete_entity(self._cheat_message, immediate=True)
+        text = self._cheats_info["messages"][cheat].format(**values)
+        message = create_interface_text(self.ecs_world, text, self._cheats_info["message"])
+        self.ecs_world.add_component(message, CLifetime(self._cheats_info["message_duration"]))
+        self.ecs_world.add_component(message, CTagHideOnPause())
+        self._cheat_message = message
 
     def toggle_pause(self) -> None:
         """Pausa o reanuda (LC-ESC-04.3): esconde el mundo y el minimapa y muestra el menú de pausa."""

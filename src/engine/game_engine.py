@@ -31,6 +31,7 @@ class GameEngine:
         self.is_running = False
         self.delta_time = 0.0
         ServiceLocator.game_state_service.load(ServiceLocator.configs_service.get(constants.score_config))
+        ServiceLocator.cheats_service.load(ServiceLocator.configs_service.get(constants.cheats_config))
 
         self._scenes: dict[str, Scene] = {
             "title": TitleScene(self),
