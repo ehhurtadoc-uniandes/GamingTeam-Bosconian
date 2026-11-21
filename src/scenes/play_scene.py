@@ -37,7 +37,8 @@ from src.ecs.systems.s_lifetime import system_lifetime
 from src.ecs.systems.s_lives_hud import system_lives_hud
 from src.ecs.systems.s_minimap import system_minimap
 from src.ecs.systems.s_movement import system_movement
-from src.ecs.systems.s_obstacles import system_mine_blast, system_player_bullet_obstacle
+from src.ecs.systems.s_obstacles import (system_enemy_obstacle, system_mine_blast, system_obstacle_bounce,
+                                        system_player_bullet_obstacle)
 from src.ecs.systems.s_offscreen_despawn import system_offscreen_despawn
 from src.ecs.systems.s_pause import system_pause_visibility
 from src.ecs.systems.s_menu import get_menu, move_selection, selected_action, system_menu_highlight
@@ -222,6 +223,7 @@ class PlayScene(Scene):
         system_turret(self.ecs_world, delta_time, player_center, self._bullet_info, self.world_size)
         system_movement(self.ecs_world, delta_time)
         system_enemy_bounce(self.ecs_world, self.world_size)
+        system_obstacle_bounce(self.ecs_world, self.world_size)
         # Justo después de mover: lo que salió por un borde vuelve por el opuesto.
         system_wraparound(self.ecs_world, self.world_size)
         # La cámara sigue al jugador ya movido, para que no se vea un frame atrasada.
@@ -235,6 +237,7 @@ class PlayScene(Scene):
         system_offscreen_despawn(self.ecs_world, camera=get_camera(self.ecs_world))
         system_enemy_bullet_collision(self.ecs_world, self.world_size)
         system_player_bullet_obstacle(self.ecs_world, self._obstacles_info, self.world_size)
+        system_enemy_obstacle(self.ecs_world, self._obstacles_info, self.world_size)
         # Después de las balas de torreta (un enemigo que ya mató una torreta no da puntos) y de los
         # obstáculos. Antes de la muerte del jugador: si la bala mata al enemigo que lo tocaba, sobrevive.
         system_player_bullet_enemy(self.ecs_world, self.world_size)

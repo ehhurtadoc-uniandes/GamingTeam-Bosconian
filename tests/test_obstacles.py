@@ -20,7 +20,9 @@ from src.ecs.components.c_transform import CTransform
 from src.ecs.components.c_enemy import CEnemy, EnemyType
 from src.ecs.systems.s_animation import system_animation
 from src.ecs.systems.s_collision import hitbox_center
-from src.ecs.systems.s_obstacles import hit_obstacle, system_mine_blast, system_player_bullet_obstacle
+from src.ecs.components.c_velocity import CVelocity
+from src.ecs.systems.s_obstacles import (hit_obstacle, system_enemy_obstacle, system_mine_blast,
+                                        system_obstacle_bounce, system_player_bullet_obstacle)
 from src.engine.service_locator import ServiceLocator
 from src.utils.wrap import wrapped_delta
 
@@ -173,6 +175,68 @@ class TestObstacles(unittest.TestCase):
         system_player_bullet_obstacle(self.world, OBSTACLES, WORLD)
         self.assertEqual(sum(self.world.entity_exists(r) for r in rocks), 1)
         self.assertEqual(ServiceLocator.game_state_service.score, 10)
+
+
+    def add_box(self, center, size, layer, velocity=None, enemy=False):
+        """Entidad de prueba con sprite y hitbox del mismo tamaño, centrada en center."""
+        size = pygame.Vector2(size)
+        entity = self.world.create_entity(CTransform(pygame.Vector2(center) - size / 2),
+                                          CSurface(size, pygame.Color(255, 255, 255)),
+                                          CHitBox(size, pygame.Vector2(0, 0), layer))
+        if velocity is not None:
+            self.world.add_component(entity, CVelocity(pygame.Vector2(velocity)))
+        if enemy:
+            self.world.add_component(entity, CEnemy(EnemyType.I))
+        return entity
+
+    def test_roca_indestructible_se_mueve(self):
+        solid = create_obstacle(self.world, OBSTACLES, ObstacleKind.SOLID_ROCK, pygame.Vector2(100, 100),
+                                random.Random(0))
+        vel = self.world.component_for_entity(solid, CVelocity).vel
+        self.assertAlmostEqual(vel.length(), OBSTACLES["solid_rock"]["speed"])
+
+    def test_roca_y_mina_no_se_mueven(self):
+        for kind in (ObstacleKind.ROCK, ObstacleKind.MINE):
+            entity = create_obstacle(self.world, OBSTACLES, kind, pygame.Vector2(100, 100), random.Random(0))
+            self.assertFalse(self.world.has_component(entity, CVelocity))
+
+    def test_roca_rota_deja_explosion(self):
+        rock = create_obstacle(self.world, OBSTACLES, ObstacleKind.ROCK, pygame.Vector2(100, 100), random.Random(0))
+        hit_obstacle(self.world, rock, OBSTACLES)
+        self.assertFalse(self.world.entity_exists(rock))
+        self.assertEqual(len(self.world.get_component(CAnimation)), 1)
+
+    def test_enemigo_que_choca_con_roca_mueren_los_dos(self):
+        rock = create_obstacle(self.world, OBSTACLES, ObstacleKind.ROCK, pygame.Vector2(100, 100), random.Random(0))
+        enemy = self.add_box((100, 100), (8, 8), CollisionLayer.ENEMY, enemy=True)
+        system_enemy_obstacle(self.world, OBSTACLES, WORLD)
+        self.assertFalse(self.world.entity_exists(enemy))
+        self.assertFalse(self.world.entity_exists(rock))
+
+    def test_enemigo_muere_contra_roca_indestructible_y_ella_sigue(self):
+        solid = create_obstacle(self.world, OBSTACLES, ObstacleKind.SOLID_ROCK, pygame.Vector2(100, 100),
+                                random.Random(0))
+        enemy = self.add_box((100, 100), (8, 8), CollisionLayer.ENEMY, enemy=True)
+        system_enemy_obstacle(self.world, OBSTACLES, WORLD)
+        self.assertFalse(self.world.entity_exists(enemy))
+        self.assertTrue(self.world.entity_exists(solid))
+
+    def test_bala_enemiga_se_detiene_en_un_obstaculo(self):
+        solid = create_obstacle(self.world, OBSTACLES, ObstacleKind.SOLID_ROCK, pygame.Vector2(100, 100),
+                                random.Random(0))
+        bullet = self.add_box((100, 100), (3, 3), CollisionLayer.ENEMY_BULLET)
+        system_enemy_obstacle(self.world, OBSTACLES, WORLD)
+        self.assertFalse(self.world.entity_exists(bullet))
+        self.assertTrue(self.world.entity_exists(solid))
+
+    def test_roca_indestructible_rebota_en_la_base(self):
+        base = self.add_box((100, 100), (40, 40), CollisionLayer.BASE)
+        rock = self.add_box((76, 100), (12, 12), CollisionLayer.OBSTACLE, velocity=(12, 0))
+        system_obstacle_bounce(self.world, WORLD)
+        self.assertTrue(self.world.entity_exists(base))
+        self.assertEqual(self.world.component_for_entity(rock, CVelocity).vel, pygame.Vector2(-12, 0))
+        # Queda afuera de la base: su borde derecho toca el izquierdo de la base (x=80).
+        self.assertEqual(self.world.component_for_entity(rock, CTransform).pos.x + 12, 80)
 
 
 if __name__ == "__main__":

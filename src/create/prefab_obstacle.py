@@ -10,6 +10,7 @@ from src.ecs.components.c_mine_blast import CMineBlast
 from src.ecs.components.c_obstacle import CObstacle, ObstacleKind
 from src.ecs.components.c_surface import CSurface
 from src.ecs.components.c_transform import CTransform
+from src.ecs.components.c_velocity import CVelocity
 from src.ecs.systems.s_animation import set_frame
 from src.engine.service_locator import ServiceLocator
 from src.utils.wrap import wrapped_delta
@@ -17,7 +18,10 @@ from src.utils.wrap import wrapped_delta
 
 def create_obstacle(world: esper.World, obstacles_info: dict, kind: ObstacleKind,
                     center: pygame.Vector2, rng: random.Random) -> int:
-    """Crea un obstáculo quieto con centro en center (coordenadas de mundo).
+    """Crea un obstáculo con centro en center (coordenadas de mundo).
+
+    Rocas y minas son quietas. Si el tipo trae "speed" (la roca indestructible, LC-OBS-03.1),
+    se mueve a esa rapidez en una dirección al azar; el wraparound la hace dar la vuelta al mundo.
 
     rng es el azar del nivel (con su semilla), para que la imagen elegida también salga
     siempre igual en ese nivel.
@@ -39,6 +43,9 @@ def create_obstacle(world: esper.World, obstacles_info: dict, kind: ObstacleKind
     margin = pygame.Vector2(info["hitbox_margin"], info["hitbox_margin"])
     world.add_component(entity, CHitBox(sprite_size - 2 * margin, margin, CollisionLayer.OBSTACLE))
     world.add_component(entity, CTransform(center - sprite_size / 2))
+    if "speed" in info:
+        direction = pygame.Vector2(1, 0).rotate(rng.uniform(0, 360))
+        world.add_component(entity, CVelocity(direction * info["speed"]))
     return entity
 
 
