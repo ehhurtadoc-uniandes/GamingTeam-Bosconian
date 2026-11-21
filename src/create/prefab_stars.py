@@ -24,8 +24,9 @@ def create_starfield(world: esper.World, stars_info: dict, viewport: pygame.Rect
         c = random.choice(stars_info["colors"])
         pos = pygame.Vector2(random.uniform(viewport.left, viewport.right),
                              random.uniform(viewport.top, viewport.bottom))
-        blink = stars_info["blink"]["on"]
-        star = CStar(layer["parallax"], random.uniform(blink["min"], blink["max"]))
-        stars.append(world.create_entity(CTransform(pos), CSurface(size, pygame.Color(c["r"], c["g"], c["b"])),
-                                         star, CTagBackground()))
+        # Cada estrella arranca en un brillo y sentido al azar: así brillan a diferentes tiempos (LC-EST-02).
+        star = CStar(layer["parallax"], random.uniform(0, 255), random.choice((True, False)))
+        surface = CSurface(size, pygame.Color(c["r"], c["g"], c["b"]))
+        surface.surf.set_alpha(int(star.alpha))
+        stars.append(world.create_entity(CTransform(pos), surface, star, CTagBackground()))
     return stars
