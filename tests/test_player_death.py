@@ -37,7 +37,7 @@ from src.ecs.systems.s_player_fire import system_player_fire
 from src.ecs.systems.s_player_movement import system_player_acceleration
 from src.engine.game_engine import GameEngine
 from src.engine.service_locator import ServiceLocator
-from src.scenes.text_scene import TextScene
+from src.scenes.defeat_scene import DefeatScene
 from src.utils.wrap import wrapped_delta
 from tests.test_input import key_event
 from tests.test_obstacles import OBSTACLES
@@ -410,9 +410,13 @@ class TestMuerteEnPlayScene(unittest.TestCase):
 
     def test_escena_de_derrota_existe_y_vuelve_al_titulo(self):
         defeat = self.engine._scenes["defeat"]
-        self.assertIsInstance(defeat, TextScene)
+        self.assertIsInstance(defeat, DefeatScene)
         defeat.start()
-        defeat.process_events(key_event(pygame.KEYDOWN, pygame.K_z))
+        # Z acepta la opción elegida (SI = continuar); Escape elige NO y vuelve al título (#37).
+        # Al entrar no se acepta nada durante input_delay, así que primero se deja pasar ese tiempo.
+        for _ in range(60):
+            defeat.simulate(1 / 60)
+        defeat.process_events(key_event(pygame.KEYDOWN, pygame.K_ESCAPE))
         self.assertEqual(self.engine._scene_name_to_switch, "title")
         defeat.simulate(1 / 60)
         defeat.do_draw(self.engine.screen)
