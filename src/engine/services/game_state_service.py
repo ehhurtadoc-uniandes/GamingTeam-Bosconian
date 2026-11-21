@@ -13,7 +13,11 @@ class GameStateService:
     "cero vidas se considera una vida"), y la partida termina si muere así.
 
     level_index es el nivel que se juega (índice en levels.json): lo elige la escena de título
-    y lo avanza el paso de nivel (#26). new_game no lo cambia, así continuar (#37) sigue en el mismo nivel.
+    y lo avanza el paso de nivel (#26). Ni new_game ni continue_game lo cambian, así continuar
+    (#37) sigue en el mismo nivel.
+
+    continues_used y lives_lost cuentan las continuaciones y las naves perdidas de toda la
+    partida, para la escena de victoria (LC-ESC-05.2). Solo new_game los reinicia.
     """
 
     def __init__(self) -> None:
@@ -22,6 +26,8 @@ class GameStateService:
         self.lives = 0
         self.next_extra_life = 0
         self.level_index = 0
+        self.continues_used = 0
+        self.lives_lost = 0
         self._lives_info: dict = {}
 
     def load(self, score_info: dict) -> None:
@@ -31,7 +37,20 @@ class GameStateService:
         self.new_game()
 
     def new_game(self) -> None:
-        """Reinicia la partida; el HI-SCORE se conserva."""
+        """Reinicia la partida desde el título; el HI-SCORE y el nivel elegido se conservan."""
+        self._reset_run()
+        self.continues_used = 0
+        self.lives_lost = 0
+
+    def continue_game(self) -> None:
+        """Continuar tras la derrota (LC-ESC-06.2): recupera todas las vidas y pierde todo el puntaje.
+
+        Sigue en el mismo nivel y suma una continuación.
+        """
+        self._reset_run()
+        self.continues_used += 1
+
+    def _reset_run(self) -> None:
         self.score = 0
         self.lives = self._lives_info["initial"]
         self.next_extra_life = self._lives_info["extra_life"]["first"]
@@ -50,6 +69,7 @@ class GameStateService:
 
     def lose_life(self) -> bool:
         """Descuenta una vida al morir. Devuelve False si no quedaba reserva: la partida terminó."""
+        self.lives_lost += 1
         if self.lives == 0:
             return False
         self.lives -= 1
