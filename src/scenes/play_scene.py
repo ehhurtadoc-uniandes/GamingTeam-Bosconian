@@ -43,6 +43,7 @@ from src.ecs.systems.s_pause import system_pause_visibility
 from src.ecs.systems.s_menu import get_menu, move_selection, selected_action, system_menu_highlight
 from src.ecs.systems.s_player_death import (is_vulnerable, kill_player, system_player_death,
                                            system_player_invulnerability, system_player_respawn)
+from src.ecs.systems.s_player_bullet_enemy import system_player_bullet_enemy
 from src.ecs.systems.s_player_fire import system_player_fire, system_player_weapon_cooldown
 from src.ecs.systems.s_player_sprite import system_player_sprite
 from src.ecs.systems.s_player_movement import system_player_acceleration, system_player_direction
@@ -234,7 +235,10 @@ class PlayScene(Scene):
         system_offscreen_despawn(self.ecs_world, camera=get_camera(self.ecs_world))
         system_enemy_bullet_collision(self.ecs_world, self.world_size)
         system_player_bullet_obstacle(self.ecs_world, self._obstacles_info, self.world_size)
-        # Después de los obstáculos: una bala que ya se gastó en uno no daña la base.
+        # Después de las balas de torreta (un enemigo que ya mató una torreta no da puntos) y de los
+        # obstáculos. Antes de la muerte del jugador: si la bala mata al enemigo que lo tocaba, sobrevive.
+        system_player_bullet_enemy(self.ecs_world, self.world_size)
+        # Después de los obstáculos y los enemigos: una bala que ya se gastó en uno no daña la base.
         system_player_bullet_base(self.ecs_world, self._base_points, self.world_size)
         system_animation(self.ecs_world, delta_time)
         # Después de la animación, para que la explosión se borre justo al terminar.
