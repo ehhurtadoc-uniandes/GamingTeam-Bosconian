@@ -85,8 +85,9 @@ class TestDefeatScene(unittest.TestCase):
         game_state.lives = 0
         self.scene = self.engine._scenes["defeat"]
         self.scene.start()
-        self.continue_time = ServiceLocator.configs_service.get(
-            ServiceLocator.constants_service.defeat_config)["continue_time"]
+        defeat_info = ServiceLocator.configs_service.get(ServiceLocator.constants_service.defeat_config)
+        self.continue_time = defeat_info["continue_time"]
+        self.input_delay = defeat_info["input_delay"]
 
     def press(self, key):
         self.scene.process_events(key_event(pygame.KEYDOWN, key))
@@ -108,7 +109,11 @@ class TestDefeatScene(unittest.TestCase):
         self.run_for(1.5)
         self.assertIn(f"CONTINUAR? {self.continue_time - 1}", self.texts())
 
+    def wait_input_delay(self):
+        self.run_for(self.input_delay + DT)
+
     def test_aceptar_si_continua_en_el_mismo_nivel_con_vidas_y_sin_puntaje(self):
+        self.wait_input_delay()
         self.press(pygame.K_z)
         game_state = ServiceLocator.game_state_service
         self.assertEqual(self.engine._scene_name_to_switch, "play")
@@ -117,6 +122,7 @@ class TestDefeatScene(unittest.TestCase):
         self.assertEqual(game_state.continues_used, 1)
 
     def test_elegir_no_vuelve_al_titulo_sin_continuar(self):
+        self.wait_input_delay()
         self.press(pygame.K_DOWN)
         self.press(pygame.K_z)
         self.assertEqual(self.engine._scene_name_to_switch, "title")
@@ -134,3 +140,34 @@ class TestDefeatScene(unittest.TestCase):
         self.scene.clean()
         self.scene.start()
         self.assertEqual(self.scene.time_left, self.continue_time)
+
+    def test_al_entrar_no_se_acepta_hasta_pasado_input_delay(self):
+        # Quien seguía disparando con Z al morir no continúa sin ver la pregunta.
+        self.press(pygame.K_z)
+        self.press(pygame.K_ESCAPE)
+        self.assertIsNone(self.engine._scene_name_to_switch)
+        self.assertEqual(ServiceLocator.game_state_service.continues_used, 0)
+        self.wait_input_delay()
+        self.press(pygame.K_z)
+        self.assertEqual(self.engine._scene_name_to_switch, "play")
+
+    def test_durante_input_delay_si_se_puede_mover_la_seleccion(self):
+        self.press(pygame.K_DOWN)
+        self.wait_input_delay()
+        self.press(pygame.K_z)
+        self.assertEqual(self.engine._scene_name_to_switch, "title")
+
+    def test_aceptar_si_en_el_frame_en_que_vence_la_cuenta_continua(self):
+        # El motor procesa los eventos antes del update: la cuenta no debe pisar el SI con el título.
+        self.wait_input_delay()
+        self.scene.time_left = DT / 2
+        self.press(pygame.K_z)
+        self.scene.simulate(DT)
+        self.assertEqual(self.engine._scene_name_to_switch, "play")
+        self.assertEqual(ServiceLocator.game_state_service.continues_used, 1)
+
+    def test_dos_aceptar_en_un_frame_continuan_una_sola_vez(self):
+        self.wait_input_delay()
+        self.scene.process_events(key_event(pygame.KEYDOWN, pygame.K_z))
+        self.scene.process_events(key_event(pygame.KEYDOWN, pygame.K_RETURN))
+        self.assertEqual(ServiceLocator.game_state_service.continues_used, 1)

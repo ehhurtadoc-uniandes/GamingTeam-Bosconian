@@ -1,5 +1,6 @@
 {
   "continue_time": 5,
+  "input_delay": 0.5,
   "title": {
     "text": "FIN DEL JUEGO",
     "anchor": {

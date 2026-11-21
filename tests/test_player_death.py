@@ -413,6 +413,9 @@ class TestMuerteEnPlayScene(unittest.TestCase):
         self.assertIsInstance(defeat, DefeatScene)
         defeat.start()
         # Z acepta la opción elegida (SI = continuar); Escape elige NO y vuelve al título (#37).
+        # Al entrar no se acepta nada durante input_delay, así que primero se deja pasar ese tiempo.
+        for _ in range(60):
+            defeat.simulate(1 / 60)
         defeat.process_events(key_event(pygame.KEYDOWN, pygame.K_ESCAPE))
         self.assertEqual(self.engine._scene_name_to_switch, "title")
         defeat.simulate(1 / 60)
