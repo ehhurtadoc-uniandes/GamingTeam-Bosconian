@@ -1,0 +1,29 @@
+{
+  "green_duration": 5.0,
+  "base_destroyed_green_duration": 5.0,
+  "red_after": 120.0,
+  "red_speed_multiplier": 2.0,
+  "red_rate_multiplier": 2.0,
+  "sounds": {
+    "green": "assets/snd/alert_green.ogg",
+    "yellow": "assets/snd/alert_yellow.ogg",
+    "red": "assets/snd/alert_red.ogg"
+  },
+  "hud": {
+    "label": {
+      "text": "CONDITION",
+      "anchor": { "x": 220, "y": 40 },
+      "alignment": "CENTER",
+      "color": { "r": 255, "g": 60, "b": 60 }
+    },
+    "value": {
+      "anchor": { "x": 224, "y": 52 },
+      "alignment": "CENTER"
+    },
+    "states": {
+      "green": { "text": "GREEN", "color": { "r": 60, "g": 230, "b": 90 } },
+      "yellow": { "text": "YELLOW", "color": { "r": 255, "g": 230, "b": 60 } },
+      "red": { "text": "RED", "color": { "r": 255, "g": 50, "b": 50 } }
+    }
+  }
+}

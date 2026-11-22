@@ -3,7 +3,8 @@
 En modo STATIC el núcleo queda abierto y este sistema no hace nada con él. En modo
 CYCLING recorre CLOSED -> OPENING -> OPEN -> CLOSING -> CLOSED y, cada vez que pasa
 de OPENING a OPEN, lanza un E centrado en el núcleo. Los lanzamientos no dependen del
-jugador ni del spawner del nivel.
+jugador ni del spawner del nivel, pero sí de la alerta (#29): en VERDE no lanza y en ROJA
+cicla más rápido.
 """
 import esper
 import pygame
@@ -18,10 +19,13 @@ from src.ecs.components.c_surface import CSurface
 from src.ecs.components.c_transform import CTransform
 
 
-def system_base_core(world: esper.World, delta_time: float, enemies_info: dict) -> list[int]:
+def system_base_core(world: esper.World, delta_time: float, enemies_info: dict,
+                     can_launch: bool = True, rate_multiplier: float = 1.0) -> list[int]:
     """Avanza el ciclo de cada núcleo CYCLING y lanza un E en cada apertura.
 
     enemies_info es assets/cfg/enemies.json. Devuelve los enemigos creados en este paso.
+    La alerta (#29) decide can_launch y rate_multiplier: en VERDE el ciclo sigue pero no
+    lanza (ni guarda el lanzamiento para después), y en ROJA el ciclo avanza más rápido.
     El tiempo sobrante pasa al estado siguiente, así que un delta_time largo atraviesa
     varios estados sin perder ni duplicar lanzamientos. Va después de system_enemy_spawner
     y antes de system_enemy_state, para que el E nuevo procese AIM en el mismo paso.
@@ -35,11 +39,11 @@ def system_base_core(world: esper.World, delta_time: float, enemies_info: dict) 
         if c_core.mode != CoreMode.CYCLING or not _belongs_to_live_base(world, core, c_core):
             continue
         previous_state = c_core.state
-        c_core.time_in_state += delta_time
+        c_core.time_in_state += delta_time * rate_multiplier
         while c_core.time_in_state >= c_core.durations[c_core.state]:
             c_core.time_in_state -= c_core.durations[c_core.state]
             c_core.state = NEXT_CORE_STATE[c_core.state]
-            if c_core.state == CoreState.OPEN:
+            if c_core.state == CoreState.OPEN and can_launch:
                 created.append(_launch_enemy(world, c_core.base, center_of_core(c_t, c_s),
                                              enemies_info, c_core.wander_scale))
         if c_core.state != previous_state:

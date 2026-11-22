@@ -14,6 +14,7 @@ hoy 1024 x 1536) y son el **centro** de lo que se crea.
     { "pos": { "x": 204, "y": 150 }, "orientation": "vertical" }
   ],
   "spawner": { "...": "ver s_enemy_spawner" },
+  "alert": { "red_after": 90 },
   "obstacles": {
     "seed": 1,
     "min_distance": 40,
@@ -31,6 +32,7 @@ hoy 1024 x 1536) y son el **centro** de lo que se crea.
 | `player_start` | no | Dónde empieza el jugador. Si falta, en el centro de la pantalla. |
 | `bases` | no | Lista de bases (sin la clave, el nivel no tiene bases): centro (`pos`) y `orientation` (`horizontal` o `vertical`). La usa `create_bases`. |
 | `spawner` | sí | Cómo aparecen los enemigos del nivel (lo usa `create_enemy_spawner`). |
+| `alert` | no | Tiempos y multiplicadores de la alerta solo para este nivel. Lo que no traiga sale de `assets/cfg/alerts.json`. Ver abajo. |
 | `obstacles` | no | Cuántos obstáculos de cada tipo se reparten al azar por el mundo. |
 | `obstacles.seed` | no | Semilla del azar: con la misma semilla el nivel siempre sale igual. |
 | `obstacles.min_distance` | no | Distancia mínima entre obstáculos, bases e inicio del jugador (por defecto 32). |
@@ -68,7 +70,8 @@ El modo se elige por nivel; el aspecto y los tiempos están en `assets/cfg/base.
 - `cycling`: empieza en `closed` y repite `closed` → `opening` → `open` → `closing`. Cada paso de
   `opening` a `open` lanza un E centrado en el núcleo, con el `spawner.wander_scale` del nivel (1.0 si
   falta). Es independiente del spawner: sale aunque no haya spawner, esté inactivo o se haya llegado a
-  `max_alive`. Los E del núcleo sí cuentan para el `max_alive` del spawner.
+  `max_alive`. Los E del núcleo sí cuentan para el `max_alive` del spawner. Lo que sí lo afecta es la
+  alerta (ver abajo): en VERDE no lanza, y en ROJA el ciclo avanza más rápido.
 
 Un `mode` desconocido, una duración que falte o no sea mayor que 0, o un estado sin `image`/`color`
 dan un error al cargar el nivel que nombra el archivo y el campo.
@@ -82,6 +85,42 @@ dan un error al cargar el nivel que nombra el archivo y el campo.
 
 Para jugarlos, en la pantalla de título se elige la ronda con izquierda/derecha (RONDA 1 o RONDA 2)
 y se acepta JUGAR; la ronda elegida es `PlayScene.level_index`, el índice en `levels.json`.
+
+## Alerta VERDE, AMARILLA y ROJA (`alert`, #29)
+
+Cada nivel tiene una condición de alerta que se ve en el HUD ("CONDITION") y regula a los enemigos:
+
+- **VERDE**: el nivel empieza así. El spawner no crea enemigos (su `initial_delay` queda congelado
+  y sigue al pasar a AMARILLA) y los núcleos `cycling` se siguen abriendo y cerrando, pero no lanzan E.
+  Los enemigos que ya estaban siguen igual.
+- **AMARILLA**: pasados `green_duration` segundos de juego. El spawner y los núcleos funcionan
+  como dice el nivel. Destruir una base la pone en VERDE durante `base_destroyed_green_duration`
+  segundos (otra base en ese rato reinicia la cuenta) y después vuelve a AMARILLA.
+- **ROJA**: cuando el tiempo total de juego del nivel llega a `red_after`, desde cualquier estado.
+  Los enemigos vivos y los nuevos van `red_speed_multiplier` veces más rápido, y el spawner y los
+  núcleos avanzan `red_rate_multiplier` veces más rápido. Siguen rigiendo `max_alive` y el máximo de
+  un enemigo del spawner por paso. Ya no baja en ese nivel, aunque se destruyan bases.
+
+El tiempo solo corre mientras se juega: no durante el BLAST OFF ni en pausa. La muerte del jugador no
+lo detiene. Al pasar de nivel, continuar tras la derrota o saltar de nivel con la trampa, la alerta
+vuelve a VERDE desde cero. Cada cambio de estado suena.
+
+Los valores generales están en `assets/cfg/alerts.json`:
+
+| Clave | Por defecto | Qué es |
+|---|---|---|
+| `green_duration` | 5 | Segundos de juego del VERDE inicial. Mayor que 0. |
+| `base_destroyed_green_duration` | 5 | Segundos del VERDE que da destruir una base en AMARILLA. Mayor que 0. |
+| `red_after` | 120 | Segundos de juego del nivel hasta la ROJA. Mayor que 0. Si es menor o igual que `green_duration`, el nivel pasa de VERDE a ROJA sin AMARILLA. |
+| `red_speed_multiplier` | 2 | Multiplicador de velocidad de los enemigos en ROJA. 1 o más. |
+| `red_rate_multiplier` | 2 | Multiplicador del ritmo del spawner y de los núcleos en ROJA. 1 o más. |
+| `sounds` | `assets/snd/alert_*.ogg` | Sonido de cada estado (`green`, `yellow`, `red`), que suena al llegar a él. Provisionales hasta #38. |
+| `hud` | | `label` (texto "CONDITION", `anchor`, `alignment`, `color`), `value` (`anchor`, `alignment`) y `states` (`text` y `color` de cada estado). |
+
+El bloque `alert` del nivel solo puede traer las cinco primeras claves; sonidos y HUD van solo en
+`alerts.json`. Un campo que falte, un tipo incorrecto, un tiempo no positivo, un multiplicador menor
+que 1, una clave que no se puede cambiar por nivel o un sonido que no existe dan un error al cargar el
+nivel que nombra el archivo y el campo.
 
 ## Claves que vienen después (semana 3)
 

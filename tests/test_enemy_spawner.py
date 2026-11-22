@@ -170,7 +170,8 @@ class TestSpawnerEnPlayScene(unittest.TestCase):
 
     def test_el_nivel_de_prueba_hace_aparecer_enemigos_con_el_tiempo(self):
         self.assertEqual(self.scene.ecs_world.get_component(CEnemy), [])
-        for _ in range(round(6 / DT)):
+        # BLAST OFF, el VERDE inicial de la alerta (#29) y el initial_delay del spawner.
+        for _ in range(round(12 / DT)):
             self.scene.simulate(DT)
         self.assertGreater(len(self.scene.ecs_world.get_component(CEnemy)), 0)
         self.scene.do_draw(self.engine.screen)
