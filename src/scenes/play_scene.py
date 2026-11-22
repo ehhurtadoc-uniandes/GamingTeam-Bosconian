@@ -144,10 +144,20 @@ class PlayScene(Scene):
         self._respawn_info: dict = {}
         self._player_spawn_pos = pygame.Vector2(0, 0)
         self._clear_time = 0.0
+        # Escena pedida en el último switch_scene: al volver a crear la escena de juego (paso de
+        # ronda o trampa N) se conservan las direcciones presionadas; viniendo de otra escena, no.
+        self._switching_to: str | None = None
+
+    def switch_scene(self, new_scene_name: str) -> None:
+        self._switching_to = new_scene_name
+        super().switch_scene(new_scene_name)
 
     def do_create(self) -> None:
         constants = ServiceLocator.constants_service
-        self._held_direction_keys.clear()
+        keep_directions = self._switching_to == constants.play_scene
+        self._switching_to = None
+        if not keep_directions:
+            self._held_direction_keys.clear()
         self.level_index = ServiceLocator.game_state_service.level_index
         self.state = PlayState.PLAYING
         self._blast_off_info = ServiceLocator.configs_service.get(constants.blast_off_config)
@@ -170,6 +180,8 @@ class PlayScene(Scene):
                                             self._has_special_shot or special_cheat)
         if self._has_special_shot:
             create_special_shot_message(self.ecs_world, player_info["special_shot"])
+        if keep_directions:
+            self._restore_held_directions()
         player_center = pos + pygame.Vector2(size["w"], size["h"]) / 2
         create_camera(self.ecs_world, world_info["camera"], self.world_size, player_center)
         self._stars_info = ServiceLocator.configs_service.get(constants.stars_config)
@@ -188,6 +200,18 @@ class PlayScene(Scene):
             cheat, values = self._pending_cheat_message
             self._pending_cheat_message = None
             self._show_cheat_message(cheat, **values)
+
+    def _restore_held_directions(self) -> None:
+        """Las flechas que seguían presionadas al cambiar de ronda mueven a la nave de la ronda nueva.
+
+        Los comandos del mundo nuevo empiezan sin presionar: se marcan en START para que el
+        KEYUP (o el regreso del stick al centro) que llegue después los suelte.
+        """
+        c_input: CInputCommand
+        for _, c_input in self.ecs_world.get_component(CInputCommand):
+            if (c_input.name, c_input.key) in self._held_direction_keys:
+                c_input.phase = CommandPhase.START
+        self._update_player_direction()
 
     def _create_level(self) -> None:
         """Crea las entidades del nivel actual según su JSON: bases, spawner de enemigos y obstáculos.
@@ -291,9 +315,15 @@ class PlayScene(Scene):
         system_score_hud(self.ecs_world)
         system_lives_hud(self.ecs_world)
         system_minimap(self.ecs_world, delta_time, self.world_size)
-        if level_cleared(self.ecs_world):
+        # Si el jugador murió sin vidas, la partida terminó aunque haya caído la última base
+        # (p. ej. con una bala que seguía en vuelo): se va a la derrota, no a la siguiente ronda.
+        if level_cleared(self.ecs_world) and not self._game_over_pending():
             self.state = PlayState.CLEARED
             self._clear_time = self._levels_info["clear_delay"]
+
+    def _game_over_pending(self) -> bool:
+        c_dead: CPlayerDead
+        return any(c_dead.game_over for _, c_dead in self.ecs_world.get_component(CPlayerDead))
 
     def _update_level_clear(self, delta_time: float) -> None:
         """Sin bases: las explosiones terminan de animarse y, pasado clear_delay, se pasa de nivel."""
