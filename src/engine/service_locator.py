@@ -1,3 +1,4 @@
+from src.engine.services.cheats_service import CheatsService
 from src.engine.services.configs_service import ConfigsService
 from src.engine.services.constants_service import ConstantsService
 from src.engine.services.fonts_service import FontsService
@@ -17,3 +18,4 @@ class ServiceLocator:
     constants_service = ConstantsService()
     game_state_service = GameStateService()
     gamepad_service = GamepadService()
+    cheats_service = CheatsService()

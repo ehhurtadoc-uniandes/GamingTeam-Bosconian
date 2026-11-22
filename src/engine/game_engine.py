@@ -5,6 +5,7 @@ import pygame
 
 from src.engine.scenes.scene import Scene
 from src.engine.service_locator import ServiceLocator
+from src.scenes.defeat_scene import DefeatScene
 from src.scenes.play_scene import PlayScene
 from src.scenes.text_scene import TextScene
 from src.scenes.title_scene import TitleScene
@@ -30,13 +31,14 @@ class GameEngine:
         self.is_running = False
         self.delta_time = 0.0
         ServiceLocator.game_state_service.load(ServiceLocator.configs_service.get(constants.score_config))
+        ServiceLocator.cheats_service.load(ServiceLocator.configs_service.get(constants.cheats_config))
 
         self._scenes: dict[str, Scene] = {
             "title": TitleScene(self),
             "instructions": TextScene(self, constants.instructions_config),
             "credits": TextScene(self, constants.credits_config),
             "play": PlayScene(self),
-            "defeat": TextScene(self, constants.defeat_config),
+            "defeat": DefeatScene(self),
         }
         self._current_scene: Scene | None = None
         self._scene_name_to_switch: str | None = None
