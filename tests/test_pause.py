@@ -32,7 +32,7 @@ from src.scenes.play_scene import PlayState
 from tests.test_gamepad import button
 
 WHITE = pygame.Color(255, 255, 255)
-BLINK = {"on": {"min": 1.0, "max": 1.0}, "off": {"min": 0.5, "max": 0.5}}
+BLINK = {"speed": 340}
 DT = 1 / 60
 
 
@@ -93,10 +93,10 @@ class TestStarBlink(unittest.TestCase):
     def test_parpadea_sin_moverse(self):
         world = esper.World()
         star = world.create_entity(CTransform(pygame.Vector2(5, 5)),
-                                   CSurface(pygame.Vector2(1, 1), WHITE), CStar(0.5, 0.01))
-        system_star_blink(world, 0.02, BLINK)
-        self.assertFalse(world.component_for_entity(star, CStar).visible)
-        self.assertEqual(world.component_for_entity(star, CSurface).surf.get_alpha(), 0)
+                                   CSurface(pygame.Vector2(1, 1), WHITE), CStar(0.5, 100, False))
+        system_star_blink(world, 0.25, BLINK)
+        self.assertEqual(world.component_for_entity(star, CStar).alpha, 15)
+        self.assertEqual(world.component_for_entity(star, CSurface).surf.get_alpha(), 15)
         self.assertEqual(world.component_for_entity(star, CTransform).pos, pygame.Vector2(5, 5))
 
 
@@ -149,13 +149,13 @@ class TestPlayScenePause(unittest.TestCase):
         self.press(pygame.K_p)
         before = self.player_pos()
         stars = {e: pygame.Vector2(c.pos) for e, (c, _) in self.world.get_components(CTransform, CStar)}
-        blinks = {e: c.visible for e, c in self.world.get_component(CStar)}
+        blinks = {e: c.alpha for e, c in self.world.get_component(CStar)}
         for _ in range(round(3 / DT)):
             self.scene.simulate(DT)
         self.assertEqual(self.player_pos(), before)
         for entity, pos in stars.items():
             self.assertEqual(self.world.component_for_entity(entity, CTransform).pos, pos)
-        changed = [e for e, c in self.world.get_component(CStar) if c.visible != blinks[e]]
+        changed = [e for e, c in self.world.get_component(CStar) if c.alpha != blinks[e]]
         self.assertTrue(changed)
 
     def test_en_pausa_no_aparecen_enemigos(self):

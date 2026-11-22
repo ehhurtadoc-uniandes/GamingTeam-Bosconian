@@ -10,15 +10,15 @@ from src.ecs.components.c_star import CStar
 from src.ecs.components.c_surface import CSurface
 from src.ecs.components.c_transform import CTransform
 from src.ecs.components.tags.c_tag_background import CTagBackground
-from src.ecs.systems.s_starfield import system_starfield
+from src.ecs.systems.s_starfield import system_star_blink, system_starfield
 
 VIEWPORT = pygame.Rect(0, 20, 200, 100)
-BLINK = {"on": {"min": 1.0, "max": 1.0}, "off": {"min": 0.5, "max": 0.5}}
+BLINK = {"speed": 100}
 
 
-def make_star(world, pos, parallax=0.5, time_left=10.0):
+def make_star(world, pos, parallax=0.5, alpha=100.0, rising=True):
     surf = CSurface(pygame.Vector2(1, 1), pygame.Color(255, 255, 255))
-    return world.create_entity(CTransform(pygame.Vector2(pos)), surf, CStar(parallax, time_left))
+    return world.create_entity(CTransform(pygame.Vector2(pos)), surf, CStar(parallax, alpha, rising))
 
 
 class TestStarfield(unittest.TestCase):
@@ -49,14 +49,37 @@ class TestStarfield(unittest.TestCase):
         system_starfield(self.world, 0.016, self.camera, BLINK)
         self.assertEqual(self.pos(star), pygame.Vector2(198, 118))
 
-    def test_parpadea_al_acabarse_el_tiempo(self):
-        star = make_star(self.world, (100, 50), time_left=0.01)
-        system_starfield(self.world, 0.02, self.camera, BLINK)
-        c_star = self.world.component_for_entity(star, CStar)
+    def test_brillo_sube_lento_a_velocidad_fija(self):
+        star = make_star(self.world, (100, 50), alpha=100.0, rising=True)
+        system_starfield(self.world, 0.5, self.camera, BLINK)
         c_s = self.world.component_for_entity(star, CSurface)
-        self.assertFalse(c_star.visible)
-        self.assertEqual(c_s.surf.get_alpha(), 0)
-        self.assertAlmostEqual(c_star.time_left, 0.5)
+        self.assertEqual(self.world.component_for_entity(star, CStar).alpha, 150)
+        self.assertEqual(c_s.surf.get_alpha(), 150)
+
+    def test_brillo_rebota_en_255_y_en_0(self):
+        arriba = make_star(self.world, (100, 50), alpha=250.0, rising=True)
+        abajo = make_star(self.world, (100, 50), alpha=5.0, rising=False)
+        system_starfield(self.world, 0.1, self.camera, BLINK)
+        # Rebotan con lo que sobró: 250 + 10 llega a 255 y baja 5; 5 - 10 llega a 0 y sube 5.
+        self.assertAlmostEqual(self.world.component_for_entity(arriba, CStar).alpha, 250)
+        self.assertFalse(self.world.component_for_entity(arriba, CStar).rising)
+        self.assertAlmostEqual(self.world.component_for_entity(abajo, CStar).alpha, 5)
+        self.assertTrue(self.world.component_for_entity(abajo, CStar).rising)
+
+    def test_las_estrellas_no_se_sincronizan_con_frames_irregulares(self):
+        # LC-EST-02: cada una a su tiempo. Frames de 16 y 17 ms, como los da Clock.tick, por 10 minutos.
+        world = esper.World()
+        stars = [make_star(world, (0, 0), alpha=a, rising=True) for a in (0.0, 3.0, 120.0)]
+
+        def phase(star):
+            c_star = world.component_for_entity(star, CStar)
+            return c_star.alpha if c_star.rising else 510 - c_star.alpha
+
+        gaps = [phase(b) - phase(a) for a, b in zip(stars, stars[1:])]
+        for frame in range(36000):
+            system_star_blink(world, (16, 17, 17)[frame % 3] / 1000, {"speed": 340})
+        for (a, b), gap in zip(zip(stars, stars[1:]), gaps):
+            self.assertAlmostEqual((phase(b) - phase(a)) % 510, gap, places=4)
 
     def test_create_starfield_dentro_del_viewport_y_de_fondo(self):
         info = {"count": 30, "size": 1, "layers": [{"parallax": 0.25, "weight": 1}],
