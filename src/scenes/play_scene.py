@@ -236,10 +236,13 @@ class PlayScene(Scene):
             create_enemy_spawner(self.ecs_world, level_info)
         except (KeyError, ValueError) as error:
             raise ValueError(f"{level_path}: {error}") from error
-        # Los obstáculos no aparecen encima de las bases ni del jugador.
-        avoid = [self._player_start] + [self._center_of(base) for base in bases]
+        # Los obstáculos no aparecen encima de las bases ni del jugador. Las bases cuentan por su cuerpo.
+        bases_areas = [(self._center_of(base),
+                        pygame.Vector2(self.ecs_world.component_for_entity(base, CSurface).area.size))
+                       for base in bases]
         self._obstacles_info = ServiceLocator.configs_service.get(constants.obstacles_config)
-        create_obstacles(self.ecs_world, self._obstacles_info, level_info, self.world_size, avoid)
+        create_obstacles(self.ecs_world, self._obstacles_info, level_info, self.world_size,
+                         [self._player_start], bases_areas)
 
     def _center_of(self, entity: int) -> pygame.Vector2:
         c_t = self.ecs_world.component_for_entity(entity, CTransform)

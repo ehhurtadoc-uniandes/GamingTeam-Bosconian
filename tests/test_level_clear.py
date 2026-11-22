@@ -8,10 +8,13 @@ os.environ["SDL_AUDIODRIVER"] = "dummy"
 
 import pygame
 
+from src.ecs.components.c_hitbox import CHitBox, CollisionLayer
 from src.ecs.components.c_player_movement import CPlayerMovement
 from src.ecs.components.c_text import CText
+from src.ecs.components.c_transform import CTransform
 from src.ecs.components.tags.c_tag_base import CTagBase
 from src.ecs.systems.s_base_destruction import destroy_base
+from src.ecs.systems.s_collision import hitbox_center, hitboxes_overlap
 from src.ecs.systems.s_player_death import kill_player
 from src.engine.game_engine import GameEngine
 from src.engine.service_locator import ServiceLocator
@@ -155,6 +158,23 @@ class TestLosDiezNiveles(unittest.TestCase):
                 expected = len(ServiceLocator.configs_service.get(path)["bases"])
                 self.assertEqual(len(scene.ecs_world.get_component(CTagBase)), expected)
                 self.assertIn(str(index + 1), [c.text for _, c in scene.ecs_world.get_component(CText)])
+                scene.clean()
+
+    def test_ningun_obstaculo_empieza_encima_de_una_base(self):
+        scene = self.engine._scenes["play"]
+        base_layers = (CollisionLayer.BASE, CollisionLayer.BASE_TURRET, CollisionLayer.BASE_CORE)
+        for index, path in enumerate(self.paths):
+            with self.subTest(nivel=path):
+                ServiceLocator.game_state_service.level_index = index
+                scene.start()
+                boxes = [(c_h.layer, hitbox_center(c_t, c_h), c_h.size)
+                         for _, (c_t, c_h) in scene.ecs_world.get_components(CTransform, CHitBox)]
+                obstacles = [(c, s) for layer, c, s in boxes if layer == CollisionLayer.OBSTACLE]
+                parts = [(c, s) for layer, c, s in boxes if layer in base_layers]
+                self.assertTrue(obstacles)
+                for center, size in obstacles:
+                    for part_center, part_size in parts:
+                        self.assertFalse(hitboxes_overlap(center, size, part_center, part_size, scene.world_size))
                 scene.clean()
 
 

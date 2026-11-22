@@ -31,7 +31,7 @@ hoy 1024 x 1536) y son el **centro** de lo que se crea.
 | `spawner` | sí | Cómo aparecen los enemigos del nivel (lo usa `create_enemy_spawner`). |
 | `obstacles` | no | Cuántos obstáculos de cada tipo se reparten al azar por el mundo. |
 | `obstacles.seed` | no | Semilla del azar: con la misma semilla el nivel siempre sale igual. |
-| `obstacles.min_distance` | no | Distancia mínima entre obstáculos, bases e inicio del jugador (por defecto 32). |
+| `obstacles.min_distance` | no | Distancia mínima entre obstáculos, al borde del cuerpo de las bases y al inicio del jugador (por defecto 32). |
 | `obstacles.rock` / `solid_rock` / `mine` | no | Cantidad de rocas, rocas indestructibles y minas. |
 
 Los tipos de obstáculo (imágenes, puntos, hitbox, animación, explosión de la mina y rapidez
