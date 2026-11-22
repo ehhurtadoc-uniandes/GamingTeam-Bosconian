@@ -47,6 +47,9 @@ def system_star_blink(world: esper.World, delta_time: float, blink_info: dict) -
     """Las estrellas brillan lentamente: su transparencia sube de 0 a 255 y baja, a una
     velocidad fija (blink_info["speed"], en alpha por segundo) pero cada una a su tiempo (LC-EST-02).
 
+    Al pasar de 255 o de 0 rebota con lo que sobró del paso. Si se recortara al límite, cada
+    rebote perdería un poco distinto según el frame y las estrellas se irían sincronizando.
+
     Sola, deja las estrellas quietas pero brillando (pausa).
     """
     speed = blink_info["speed"]
@@ -54,9 +57,10 @@ def system_star_blink(world: esper.World, delta_time: float, blink_info: dict) -
     c_star: CStar
     for _, (c_s, c_star) in world.get_components(CSurface, CStar):
         c_star.alpha += speed * delta_time if c_star.rising else -speed * delta_time
-        if c_star.alpha >= 255:
-            c_star.alpha, c_star.rising = 255, False
-        elif c_star.alpha <= 0:
-            c_star.alpha, c_star.rising = 0, True
+        while not 0 <= c_star.alpha <= 255:
+            if c_star.alpha > 255:
+                c_star.alpha, c_star.rising = 510 - c_star.alpha, False
+            else:
+                c_star.alpha, c_star.rising = -c_star.alpha, True
         # La transparencia va en la superficie: así system_rendering no necesita saber de estrellas.
         c_s.surf.set_alpha(int(c_star.alpha))
