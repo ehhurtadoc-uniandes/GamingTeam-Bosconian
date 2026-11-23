@@ -2,6 +2,7 @@
 import os
 import unittest
 import warnings
+from unittest import mock
 
 os.environ["SDL_VIDEODRIVER"] = "dummy"
 os.environ["SDL_AUDIODRIVER"] = "dummy"
@@ -43,6 +44,15 @@ class TestDebugEnemies(unittest.TestCase):
             self.scene.process_events(key_event(pygame.KEYUP, key))
         # esper no garantiza el orden de get_component (guarda las entidades en un set).
         self.assertCountEqual(self.enemy_types(), [EnemyType.I, EnemyType.P, EnemyType.E])
+
+    def test_las_etiquetas_y_la_ayuda_solo_salen_con_h(self):
+        self.scene.process_events(key_event(pygame.KEYDOWN, pygame.K_1))
+        with mock.patch("src.scenes.play_scene.system_enemy_labels") as labels:
+            self.scene.do_draw(self.engine.screen)
+            labels.assert_not_called()
+            self.scene.process_events(key_event(pygame.KEYDOWN, pygame.K_h))
+            self.scene.do_draw(self.engine.screen)
+            labels.assert_called_once()
 
     def test_enemigo_creado_aparece_en_un_borde_y_se_mueve(self):
         self.scene.process_events(key_event(pygame.KEYDOWN, pygame.K_1))

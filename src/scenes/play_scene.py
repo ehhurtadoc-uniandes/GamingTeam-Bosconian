@@ -25,8 +25,11 @@ from src.ecs.components.c_lifetime import CLifetime
 from src.ecs.components.c_menu_item import CMenuItem
 from src.ecs.components.c_player_dead import CPlayerDead
 from src.ecs.components.c_special_shot import CSpecialShot
+from src.ecs.components.tags.c_tag_hidden import CTagHidden
+from src.ecs.components.tags.c_tag_hidden_by_info import CTagHiddenByInfo
 from src.ecs.components.tags.c_tag_hide_on_pause import CTagHideOnPause
 from src.ecs.components.tags.c_tag_pause_overlay import CTagPauseOverlay
+from src.ecs.components.tags.c_tag_ui import CTagUI
 from src.create.prefab_explosion import create_explosion_for, destroy_with_explosion
 from src.ecs.components.c_enemy import CEnemy, EnemyType
 from src.ecs.systems.s_alert import (alert_allows_launch, alert_rate_multiplier, get_alert, system_alert,
@@ -114,8 +117,9 @@ class PlayState(Enum):
 class PlayScene(Scene):
     """Escena de juego. Crea al jugador; cada área agrega aquí sus entidades y sistemas.
 
-    Con debug.json "enabled", las teclas 1, 2 y 3 crean enemigos I, P y E y se dibuja
-    su tipo y estado encima de cada uno.
+    Con debug.json "enabled", las teclas 1, 2 y 3 crean enemigos I, P y E. La tecla H
+    muestra las hitboxes, la ayuda de las teclas y el tipo y estado de cada enemigo;
+    sin H el juego se ve como el original.
     """
 
     def __init__(self, game_engine) -> None:
@@ -399,19 +403,19 @@ class PlayScene(Scene):
     def do_draw(self, screen: pygame.Surface) -> None:
         super().do_draw(screen)
         # En pausa los enemigos no se ven, así que tampoco sus etiquetas.
-        if not self._debug_info["enabled"] or self.state != PlayState.PLAYING:
+        if not self._debug_info["enabled"] or self.state != PlayState.PLAYING or not self._show_hitboxes:
             return
         font = ServiceLocator.fonts_service.get(self._debug_info["font"], self._debug_info["font_size"])
         c = self._debug_info["label_color"]
         color = pygame.Color(c["r"], c["g"], c["b"])
         system_enemy_labels(self.ecs_world, screen, font, color, get_camera(self.ecs_world))
-        if self._show_hitboxes:
-            h = self._debug_info["hitbox_color"]
-            system_debug_hitboxes(self.ecs_world, screen, pygame.Color(h["r"], h["g"], h["b"]),
-                                  get_camera(self.ecs_world))
+        h = self._debug_info["hitbox_color"]
+        system_debug_hitboxes(self.ecs_world, screen, pygame.Color(h["r"], h["g"], h["b"]),
+                              get_camera(self.ecs_world))
         help_pos = self._debug_info["help_pos"]
-        help_text = ServiceLocator.texts_service.get(font, self._debug_info["help_text"], color)
-        screen.blit(help_text, (help_pos["x"], help_pos["y"]))
+        for i, line in enumerate(self._debug_info["help_lines"]):
+            help_text = ServiceLocator.texts_service.get(font, line, color)
+            screen.blit(help_text, (help_pos["x"], help_pos["y"] + i * self._debug_info["help_line_height"]))
 
     def do_action(self, action: CInputCommand) -> None:
         constants = ServiceLocator.constants_service
@@ -603,6 +607,7 @@ class PlayScene(Scene):
     def _show_pause_menu(self, selected: int) -> None:
         """Muestra "JUEGO PAUSADO" y el menú de pausa, con el mismo estilo de menú que el título."""
         self._clear_pause_overlay()
+        self._show_hud()
         self.state = PlayState.PAUSED
         text_info = self._pause_info["text"]
         overlay = [create_interface_text(self.ecs_world, text_info["text"], text_info),
@@ -621,6 +626,20 @@ class PlayScene(Scene):
         overlay = create_text_lines(self.ecs_world, config["lines"])
         overlay.append(create_interface_text(self.ecs_world, hint_info["text"], hint_info))
         self._tag_pause_overlay(overlay)
+        self._hide_hud()
+
+    def _hide_hud(self) -> None:
+        """Esconde el HUD (puntaje, condición, vidas...) para que no se monte sobre las instrucciones."""
+        for entity, _ in self.ecs_world.get_component(CTagUI):
+            if not self.ecs_world.has_component(entity, CTagPauseOverlay) and \
+                    not self.ecs_world.has_component(entity, CTagHidden):
+                self.ecs_world.add_component(entity, CTagHidden())
+                self.ecs_world.add_component(entity, CTagHiddenByInfo())
+
+    def _show_hud(self) -> None:
+        for entity, _ in self.ecs_world.get_component(CTagHiddenByInfo):
+            self.ecs_world.remove_component(entity, CTagHiddenByInfo)
+            self.ecs_world.remove_component(entity, CTagHidden)
 
     def _tag_pause_overlay(self, entities: list[int]) -> None:
         for entity in entities:

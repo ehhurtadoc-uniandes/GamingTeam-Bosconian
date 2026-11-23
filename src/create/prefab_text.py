@@ -21,9 +21,12 @@ def create_text(world: esper.World, text: str, font: pygame.font.Font, color: py
 
 
 def create_interface_text(world: esper.World, text: str, text_info: dict) -> int:
-    """Texto de interfaz con la fuente de interface.json; text_info trae anchor, alignment y color del JSON."""
+    """Texto de interfaz con la fuente de interface.json; text_info trae anchor, alignment y color del JSON.
+
+    Si text_info trae "font_size", se usa ese tamaño en vez del de interface.json.
+    """
     interface = ServiceLocator.configs_service.get(ServiceLocator.constants_service.interface_config)
-    font = ServiceLocator.fonts_service.get(interface["font"], interface["font_size"])
+    font = ServiceLocator.fonts_service.get(interface["font"], text_info.get("font_size", interface["font_size"]))
     color = text_info["color"]
     anchor = text_info["anchor"]
     return create_text(world, text, font, pygame.Color(color["r"], color["g"], color["b"]),

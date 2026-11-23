@@ -2,11 +2,11 @@
   "music": "TITLE",
   "tagline": {
     "text": "STAR DESTROYER",
-    "anchor": {
-      "x": 128,
-      "y": 4
+        "anchor": {
+      "x": 80,
+      "y": 24
     },
-    "alignment": "CENTER",
+    "alignment": "LEFT",
     "color": {
       "r": 220,
       "g": 40,
@@ -18,7 +18,7 @@
     "image": "assets/img/title_logo.png",
     "anchor": {
       "x": 128,
-      "y": 14
+      "y": 6
     }
   },
   "subtitle": {
