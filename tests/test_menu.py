@@ -109,6 +109,13 @@ class TestTitleScene(unittest.TestCase):
         self.assertIn("< RONDA 1 >", texts(self.scene.ecs_world))
         self.assertGreater(len(self.scene.ecs_world.get_component(CStar)), 0)
 
+    def test_muestra_la_imagen_del_titulo_centrada(self):
+        logo = ServiceLocator.images_service.get("assets/img/title_logo.png")
+        found = [c_t.pos for _, (c_t, c_s) in self.scene.ecs_world.get_components(CTransform, CSurface)
+                 if c_s.surf is logo]
+        self.assertEqual(len(found), 1)
+        self.assertEqual(found[0].x + logo.get_width() / 2, 128)
+
     def test_aceptar_en_jugar_reinicia_la_partida_y_va_al_juego(self):
         ServiceLocator.game_state_service.add_score(500)
         self.press(pygame.K_z)

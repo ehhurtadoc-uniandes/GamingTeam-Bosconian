@@ -1,5 +1,6 @@
 import pygame
 
+from src.create.prefab_logo import create_logo
 from src.create.prefab_stars import create_starfield
 from src.create.prefab_text import create_interface_text
 from src.ecs.systems.s_starfield import system_starfield_fall
@@ -11,7 +12,7 @@ class MenuScene(Scene):
     """Base de las escenas fuera del juego (título, instrucciones, créditos).
 
     Pone el fondo de estrellas, que en los menús bajan (LC-EST-04), y los textos
-    "title", "subtitle" y "hint" de su JSON si los trae.
+    "title", "subtitle" y "hint" de su JSON si los trae, y la imagen "logo".
     """
 
     def __init__(self, game_engine, config_path: str) -> None:
@@ -25,6 +26,8 @@ class MenuScene(Scene):
             ServiceLocator.sounds_service.play_music(self._config["music"])
         self._stars_info = ServiceLocator.configs_service.get(ServiceLocator.constants_service.stars_config)
         create_starfield(self.ecs_world, self._stars_info, self.screen_rect)
+        if "logo" in self._config:
+            create_logo(self.ecs_world, self._config["logo"])
         for key in ("title", "subtitle", "hint"):
             if key in self._config:
                 create_interface_text(self.ecs_world, self._config[key]["text"], self._config[key])

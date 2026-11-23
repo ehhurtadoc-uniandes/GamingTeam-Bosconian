@@ -1,23 +1,17 @@
 {
   "music": "TITLE",
-  "title": {
-    "text": "PROYECTO FINAL",
+  "logo": {
+    "image": "assets/img/title_logo.png",
     "anchor": {
       "x": 128,
-      "y": 40
-    },
-    "alignment": "CENTER",
-    "color": {
-      "r": 255,
-      "g": 60,
-      "b": 60
+      "y": 10
     }
   },
   "subtitle": {
     "text": "MISW4407",
     "anchor": {
       "x": 128,
-      "y": 54
+      "y": 86
     },
     "alignment": "CENTER",
     "color": {
@@ -29,7 +23,7 @@
   "menu": {
     "anchor": {
       "x": 128,
-      "y": 96
+      "y": 106
     },
     "line_height": 16,
     "alignment": "CENTER",
