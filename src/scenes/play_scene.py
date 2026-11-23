@@ -346,8 +346,8 @@ class PlayScene(Scene):
     def next_level(self) -> None:
         """Pasa a la siguiente ronda (#26). El puntaje y las vidas siguen en GameStateService.
 
-        Después de la última ronda se vuelve al título desde la primera, mientras no exista
-        la escena de victoria (#36).
+        Después de la última ronda va a la escena de victoria (#36) y la próxima partida
+        vuelve a empezar desde la primera ronda.
         """
         constants = ServiceLocator.constants_service
         game_state = ServiceLocator.game_state_service
@@ -356,7 +356,7 @@ class PlayScene(Scene):
             self.switch_scene(constants.play_scene)
         else:
             game_state.level_index = 0
-            self.switch_scene(constants.title_scene)
+            self.switch_scene(constants.victory_scene)
 
     def do_draw(self, screen: pygame.Surface) -> None:
         super().do_draw(screen)
@@ -453,7 +453,7 @@ class PlayScene(Scene):
             self.state = PlayState.PLAYING
 
     def _cheat_next_level(self) -> None:
-        """Trampa: pasa a la siguiente ronda; después de la última vuelve a la primera.
+        """Trampa: pasa a la siguiente ronda; desde la última va a la escena de victoria (#36).
 
         Con el jugador muerto no hace nada: si no le quedaban vidas, saltar de ronda evitaría la derrota.
         El aviso se muestra en la ronda nueva, porque el cambio de escena borra el mundo actual.
@@ -461,11 +461,10 @@ class PlayScene(Scene):
         if self.ecs_world.has_component(self._player_entity, CPlayerDead):
             return
         levels = ServiceLocator.configs_service.get(ServiceLocator.constants_service.levels_config)["levels"]
-        game_state = ServiceLocator.game_state_service
-        game_state.level_index = (game_state.level_index + 1) % len(levels)
-        # La ronda se muestra desde 1, como en el título.
-        self._pending_cheat_message = ("NEXT_LEVEL", {"level": game_state.level_index + 1})
-        self.switch_scene(ServiceLocator.constants_service.play_scene)
+        if ServiceLocator.game_state_service.level_index + 1 < len(levels):
+            # La ronda se muestra desde 1, como en el título.
+            self._pending_cheat_message = ("NEXT_LEVEL", {"level": ServiceLocator.game_state_service.level_index + 2})
+        self.next_level()
 
     def _cheat_invincible(self) -> None:
         """Trampa: nada mata al jugador (ver is_vulnerable)."""

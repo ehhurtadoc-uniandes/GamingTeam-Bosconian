@@ -68,10 +68,10 @@ class TestLevelClear(unittest.TestCase):
         self.assertEqual(self.engine._scene_name_to_switch, "play")
         self.assertEqual(self.game_state.level_index, 1)
 
-    def test_despues_de_la_ultima_ronda_vuelve_al_titulo(self):
+    def test_despues_de_la_ultima_ronda_va_a_la_victoria(self):
         self.game_state.level_index = self.level_count - 1
         self.scene.next_level()
-        self.assertEqual(self.engine._scene_name_to_switch, "title")
+        self.assertEqual(self.engine._scene_name_to_switch, "victory")
         self.assertEqual(self.game_state.level_index, 0)
 
     def test_la_nueva_ronda_conserva_el_puntaje(self):
