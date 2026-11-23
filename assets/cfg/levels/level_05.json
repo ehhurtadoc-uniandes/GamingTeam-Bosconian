@@ -1,4 +1,5 @@
 {
+  "core": { "mode": "cycling" },
   "special": false,
   "player_start": { "x": 512, "y": 1408 },
   "bases": [
