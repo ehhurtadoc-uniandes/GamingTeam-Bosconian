@@ -38,4 +38,5 @@ class VictoryScene(MenuScene):
         if action.phase != CommandPhase.START or self.wait_time > 0:
             return
         if action.name in (constants.menu_accept_command, constants.menu_back_command):
+            ServiceLocator.sounds_service.play_effect("MENU_ACCEPT")
             self.switch_scene(constants.title_scene)

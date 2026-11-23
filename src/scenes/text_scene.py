@@ -17,4 +17,5 @@ class TextScene(MenuScene):
         constants = ServiceLocator.constants_service
         if action.phase == CommandPhase.START and action.name in (constants.menu_accept_command,
                                                                   constants.menu_back_command):
+            ServiceLocator.sounds_service.play_effect("MENU_ACCEPT")
             self.switch_scene("title")

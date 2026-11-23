@@ -76,8 +76,11 @@ def create_explosion_for(world: esper.World, entity: int) -> int:
     center = c_t.pos + pygame.Vector2(c_s.area.size) / 2
     velocity = world.component_for_entity(entity, CVelocity).vel if world.has_component(entity, CVelocity) \
         else pygame.Vector2(0, 0)
+    # Cada explosión con su sonido (#38): la de la nave es más larga.
     if world.has_component(entity, CTagPlayer):
+        ServiceLocator.sounds_service.play_effect("PLAYER_EXPLOSION")
         return create_explosion_burst(world, configs["explosion"], configs["player_burst"], center, velocity)
+    ServiceLocator.sounds_service.play_effect("EXPLOSION")
     return create_explosion(world, configs["explosion"], center, velocity)
 
 

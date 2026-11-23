@@ -48,7 +48,7 @@ from src.ecs.systems.s_obstacles import (system_enemy_obstacle, system_mine_blas
                                         system_player_bullet_obstacle)
 from src.ecs.systems.s_offscreen_despawn import system_offscreen_despawn
 from src.ecs.systems.s_pause import system_pause_visibility
-from src.ecs.systems.s_menu import get_menu, move_selection, selected_action, system_menu_highlight
+from src.ecs.systems.s_menu import get_menu, move_menu_selection, selected_action, system_menu_highlight
 from src.ecs.systems.s_player_death import (is_vulnerable, kill_player, system_player_death,
                                            system_player_invulnerability, system_player_respawn)
 from src.ecs.systems.s_player_bullet_enemy import system_player_bullet_enemy
@@ -161,6 +161,8 @@ class PlayScene(Scene):
             self._held_direction_keys.clear()
         self.level_index = ServiceLocator.game_state_service.level_index
         self.state = PlayState.PLAYING
+        # Cada ronda con su música (#38): se turnan las pistas de level_music.
+        ServiceLocator.sounds_service.play_music(ServiceLocator.sounds_service.level_music(self.level_index))
         self._blast_off_info = ServiceLocator.configs_service.get(constants.blast_off_config)
         self._cheats_info = ServiceLocator.configs_service.get(constants.cheats_config)
         self._show_hitboxes = False
@@ -326,6 +328,7 @@ class PlayScene(Scene):
         if level_cleared(self.ecs_world) and not self._game_over_pending():
             self.state = PlayState.CLEARED
             self._clear_time = self._levels_info["clear_delay"]
+            ServiceLocator.sounds_service.play_effect("LEVEL_CLEAR")
 
     def _game_over_pending(self) -> bool:
         c_dead: CPlayerDead
@@ -507,13 +510,17 @@ class PlayScene(Scene):
 
     def toggle_pause(self) -> None:
         """Pausa o reanuda (LC-ESC-04.3): esconde el mundo y el minimapa y muestra el menú de pausa."""
+        sounds = ServiceLocator.sounds_service
+        sounds.play_effect("PAUSE")
         if self.state == PlayState.PLAYING:
             system_pause_visibility(self.ecs_world, paused=True)
             self._show_pause_menu(0)
+            sounds.pause_music()
         else:
             self._clear_pause_overlay()
             self.state = PlayState.PLAYING
             system_pause_visibility(self.ecs_world, paused=False)
+            sounds.resume_music()
 
     def _pause_menu_action(self, action: CInputCommand) -> None:
         """Menú de pausa: elegir con arriba y abajo y aceptar; pausa o volver reanudan."""
@@ -521,8 +528,7 @@ class PlayScene(Scene):
             return
         constants = ServiceLocator.constants_service
         if action.name in constants.menu_move_commands:
-            menu = get_menu(self.ecs_world)
-            menu.selected = move_selection(menu.selected, constants.menu_move_commands[action.name], menu.count)
+            move_menu_selection(self.ecs_world, constants.menu_move_commands[action.name])
             return
         if action.name in (constants.pause_command, constants.menu_back_command):
             choice = "RESUME"
@@ -532,6 +538,8 @@ class PlayScene(Scene):
             return
         self._event_consumed = True
         self._pause_selected = get_menu(self.ecs_world).selected
+        if choice != "RESUME":
+            ServiceLocator.sounds_service.play_effect("MENU_ACCEPT")
         if choice == "RESUME":
             self.toggle_pause()
         elif choice == "INSTRUCTIONS":
