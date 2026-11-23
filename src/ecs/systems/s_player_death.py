@@ -6,6 +6,7 @@ from src.ecs.components.c_hitbox import CollisionLayer
 from src.ecs.components.c_player_dead import CPlayerDead
 from src.ecs.components.c_player_invulnerable import CPlayerInvulnerable
 from src.ecs.components.c_player_movement import CPlayerMovement
+from src.ecs.components.c_shield import CShield
 from src.ecs.components.c_transform import CTransform
 from src.ecs.components.c_velocity import CVelocity
 from src.ecs.components.tags.c_tag_hidden import CTagHidden
@@ -21,7 +22,8 @@ def is_vulnerable(world: esper.World, player: int) -> bool:
     return (world.entity_exists(player)
             and not invincible
             and not world.has_component(player, CPlayerDead)
-            and not world.has_component(player, CPlayerInvulnerable))
+            and not world.has_component(player, CPlayerInvulnerable)
+            and not world.has_component(player, CShield))
 
 
 def kill_player(world: esper.World, player: int, respawn_info: dict) -> None:

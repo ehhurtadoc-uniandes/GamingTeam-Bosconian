@@ -12,6 +12,8 @@
     "PLAYER_EXPLOSION": "assets/snd/player_explosion.ogg",
     "BASE_DESTROYED": "assets/snd/base_destroyed.ogg",
     "EXTRA_LIFE": "assets/snd/extra_life.ogg",
+    "PICKUP": "assets/snd/extra_life.ogg",
+    "SHIELD_ON": "assets/snd/menu_accept.ogg",
     "MENU_MOVE": "assets/snd/menu_move.ogg",
     "MENU_ACCEPT": "assets/snd/menu_accept.ogg",
     "PAUSE": "assets/snd/pause.ogg",

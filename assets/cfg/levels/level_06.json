@@ -1,6 +1,7 @@
 {
   "core": { "mode": "cycling" },
   "special": false,
+  "pickup": { "chance": 0.6, "interval": 18.0 },
   "player_start": { "x": 512, "y": 800 },
   "bases": [
     { "pos": { "x": 512, "y": 160 }, "orientation": "horizontal" },

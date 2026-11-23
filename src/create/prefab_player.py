@@ -5,6 +5,7 @@ from src.create.prefab_hitbox import add_hitbox
 from src.create.prefab_square import create_square
 from src.ecs.components.c_directional_sprite import CDirectionalSprite
 from src.ecs.components.c_hitbox import CollisionLayer
+from src.ecs.components.c_player_ability import CPlayerAbility
 from src.ecs.components.c_player_movement import CPlayerMovement
 from src.ecs.components.c_player_weapon import CPlayerWeapon
 from src.ecs.components.c_special_shot import CSpecialShot
@@ -65,6 +66,8 @@ def create_player(world: esper.World, player_info: dict, pos: pygame.Vector2,
     add_hitbox(world, entity, player_info, CollisionLayer.PLAYER)
     world.add_component(entity, movement)
     world.add_component(entity, CPlayerWeapon(player_info["weapon"]))
+    if "ability" in player_info:
+        world.add_component(entity, CPlayerAbility(player_info["ability"]))
     if special_shot:
         world.add_component(entity, CSpecialShot(player_info["special_shot"]))
     world.add_component(entity, CTagPlayer())
