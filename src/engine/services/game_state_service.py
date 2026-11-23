@@ -14,7 +14,8 @@ class GameStateService:
 
     level_index es el nivel que se juega (índice en levels.json): lo elige la escena de título
     y lo avanza el paso de nivel (#26). Ni new_game ni continue_game lo cambian, así continuar
-    (#37) sigue en el mismo nivel.
+    (#37) sigue en el mismo nivel. reset_round lo vuelve a 0 cuando termina la partida, para que
+    el título muestre la ronda 1 (LC-RON-01).
 
     continues_used y lives_lost cuentan las continuaciones y las naves perdidas de toda la
     partida, para la escena de victoria (LC-ESC-05.2). Solo new_game los reinicia.
@@ -49,6 +50,16 @@ class GameStateService:
         """
         self._reset_run()
         self.continues_used += 1
+
+    def reset_round(self) -> None:
+        """Vuelve a la primera ronda al terminar la partida (LC-RON-01): fuera de juego la ronda es 1.
+
+        Lo llaman las salidas de la partida (derrota sin continuar, salir desde la pausa y la
+        victoria) y no la escena de título, que también se crea al volver de instrucciones o
+        créditos, donde la ronda elegida se conserva. No toca el puntaje, el HI-SCORE, las vidas
+        ni los contadores que muestra la escena de victoria.
+        """
+        self.level_index = 0
 
     def _reset_run(self) -> None:
         self.score = 0

@@ -24,6 +24,22 @@ from tests.test_gamepad import axis
 DT = 1 / 60
 
 
+def round_hud_texts(world):
+    """Textos del indicador de ronda (etiqueta, número), buscados por su anclaje en levels.json.
+
+    Se buscan por posición y no por contenido: así no se confunden con el aviso "RONDA N" de la
+    trampa ni con otros números del HUD.
+    """
+    round_info = ServiceLocator.configs_service.get(ServiceLocator.constants_service.levels_config)["round_hud"]
+
+    def text_at(info):
+        anchor = pygame.Vector2(info["anchor"]["x"], info["anchor"]["y"])
+        found = [c.text for _, c in world.get_component(CText) if c.anchor == anchor]
+        return found[0] if len(found) == 1 else None
+
+    return text_at(round_info["label"]), text_at(round_info["value"])
+
+
 class TestLevelClear(unittest.TestCase):
     def setUp(self):
         warnings.filterwarnings("ignore", message="no fast renderer")
@@ -51,8 +67,7 @@ class TestLevelClear(unittest.TestCase):
         return [c_text.text for _, c_text in self.world.get_component(CText)]
 
     def test_muestra_la_ronda(self):
-        self.assertIn("ROUND", self.texts())
-        self.assertIn("1", self.texts())
+        self.assertEqual(round_hud_texts(self.world), ("ROUND", "1"))
 
     def test_con_bases_sigue_jugando(self):
         self.scene.simulate(DT)
@@ -68,11 +83,23 @@ class TestLevelClear(unittest.TestCase):
         self.assertEqual(self.engine._scene_name_to_switch, "play")
         self.assertEqual(self.game_state.level_index, 1)
 
+    def test_tras_pasar_de_ronda_el_hud_muestra_el_numero_siguiente(self):
+        self.engine._current_scene = self.scene
+        self.destroy_all_bases()
+        for _ in range(round(self.clear_delay / DT) + 2):
+            self.scene.simulate(DT)
+        self.engine._handle_switch_scene()
+        self.assertEqual(round_hud_texts(self.scene.ecs_world), ("ROUND", "2"))
+
     def test_despues_de_la_ultima_ronda_va_a_la_victoria(self):
         self.game_state.level_index = self.level_count - 1
+        self.game_state.score = 4321
+        self.game_state.lives_lost = 2
         self.scene.next_level()
         self.assertEqual(self.engine._scene_name_to_switch, "victory")
         self.assertEqual(self.game_state.level_index, 0)
+        # Volver a la ronda 1 no borra lo que muestra la victoria.
+        self.assertEqual((self.game_state.score, self.game_state.lives_lost), (4321, 2))
 
     def test_la_nueva_ronda_conserva_el_puntaje(self):
         self.game_state.score = 1234

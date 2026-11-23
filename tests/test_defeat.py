@@ -16,6 +16,7 @@ from src.engine.game_engine import GameEngine
 from src.engine.service_locator import ServiceLocator
 from src.engine.services.game_state_service import GameStateService
 from src.scenes.defeat_scene import seconds_left
+from tests.test_level_clear import round_hud_texts
 
 DT = 1 / 60
 
@@ -26,6 +27,10 @@ def key_event(event_type, key):
 
 def score_info():
     return ServiceLocator.configs_service.get(ServiceLocator.constants_service.score_config)
+
+
+def texts_of(world):
+    return {c.text for _, c in world.get_component(CText)}
 
 
 class TestContinueGame(unittest.TestCase):
@@ -81,9 +86,13 @@ class TestDefeatScene(unittest.TestCase):
         self.addCleanup(ServiceLocator.fonts_service.clear)
         game_state = ServiceLocator.game_state_service
         self.addCleanup(game_state.load, score_info())
+        self.addCleanup(setattr, game_state, "level_index", game_state.level_index)
         game_state.add_score(3000)
         game_state.lives = 0
+        # Se pierde en la ronda 3 (índice 2) para ver si la ronda vuelve a 1 o se conserva.
+        game_state.level_index = 2
         self.scene = self.engine._scenes["defeat"]
+        self.engine._current_scene = self.scene
         self.scene.start()
         defeat_info = ServiceLocator.configs_service.get(ServiceLocator.constants_service.defeat_config)
         self.continue_time = defeat_info["continue_time"]
@@ -134,6 +143,46 @@ class TestDefeatScene(unittest.TestCase):
         self.run_for(1.0)
         self.assertEqual(self.engine._scene_name_to_switch, "title")
         self.assertEqual(ServiceLocator.game_state_service.continues_used, 0)
+
+    def go_to_next_scene(self):
+        self.engine._handle_switch_scene()
+        return self.engine._current_scene.ecs_world
+
+    def assert_title_in_round_1(self):
+        self.assertEqual(ServiceLocator.game_state_service.level_index, 0)
+        self.assertIn("< RONDA 1 >", texts_of(self.go_to_next_scene()))
+
+    def assert_still_in_round_3(self):
+        self.assertEqual(ServiceLocator.game_state_service.level_index, 2)
+        self.assertEqual(round_hud_texts(self.go_to_next_scene()), ("ROUND", "3"))
+
+    def test_elegir_no_vuelve_a_la_ronda_1(self):
+        self.wait_input_delay()
+        self.press(pygame.K_DOWN)
+        self.press(pygame.K_z)
+        self.assert_title_in_round_1()
+
+    def test_volver_vuelve_a_la_ronda_1(self):
+        self.wait_input_delay()
+        self.press(pygame.K_ESCAPE)
+        self.assertEqual(self.engine._scene_name_to_switch, "title")
+        self.assert_title_in_round_1()
+
+    def test_fin_de_la_cuenta_vuelve_a_la_ronda_1(self):
+        self.run_for(self.continue_time + 0.5)
+        self.assert_title_in_round_1()
+
+    def test_continuar_sigue_en_la_misma_ronda(self):
+        self.wait_input_delay()
+        self.press(pygame.K_z)
+        self.assert_still_in_round_3()
+
+    def test_continuar_justo_antes_de_que_se_acabe_la_cuenta_sigue_en_la_misma_ronda(self):
+        self.wait_input_delay()
+        self.scene.time_left = DT / 2
+        self.press(pygame.K_z)
+        self.scene.simulate(DT)
+        self.assert_still_in_round_3()
 
     def test_la_cuenta_vuelve_a_empezar_en_cada_derrota(self):
         self.run_for(3)
