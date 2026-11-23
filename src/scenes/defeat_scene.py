@@ -18,7 +18,8 @@ class DefeatScene(MenuScene):
     """Escena de derrota (LC-ESC-06): "CONTINUAR?" con cuenta regresiva y las opciones SI y NO.
 
     SI continúa en el mismo nivel con todas las vidas y el puntaje en cero (LC-ESC-06.2).
-    NO, volver o que se acabe continue_time (5 s, LC-ESC-06.1) llevan a la escena de título.
+    NO, volver o que se acabe continue_time (5 s, LC-ESC-06.1) llevan a la escena de título y
+    terminan la partida, así que la ronda vuelve a 1 (LC-RON-01).
 
     Durante input_delay al entrar no se acepta nada: Z también es disparo, y quien seguía
     disparando al morir continuaría sin ver la pregunta. La cuenta corre igual.
@@ -54,7 +55,7 @@ class DefeatScene(MenuScene):
         self.time_left -= delta_time
         self.ecs_world.component_for_entity(self._countdown_text, CText).text = self._countdown()
         if self.time_left <= 0:
-            self._resolve(ServiceLocator.constants_service.title_scene)
+            self._quit()
 
     def do_action(self, action: CInputCommand) -> None:
         if action.phase != CommandPhase.START or self._resolved:
@@ -77,7 +78,12 @@ class DefeatScene(MenuScene):
             ServiceLocator.game_state_service.continue_game()
             self._resolve(ServiceLocator.constants_service.play_scene)
         elif action == "QUIT":
-            self._resolve(ServiceLocator.constants_service.title_scene)
+            self._quit()
+
+    def _quit(self) -> None:
+        """Termina la partida sin continuar: vuelve a la ronda 1 y va al título."""
+        ServiceLocator.game_state_service.reset_round()
+        self._resolve(ServiceLocator.constants_service.title_scene)
 
     def _resolve(self, scene_name: str) -> None:
         self._resolved = True

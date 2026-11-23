@@ -376,7 +376,7 @@ class PlayScene(Scene):
         if game_state.level_index < len(self._levels_info["levels"]):
             self.switch_scene(constants.play_scene)
         else:
-            game_state.level_index = 0
+            game_state.reset_round()
             self.switch_scene(constants.victory_scene)
 
     def do_draw(self, screen: pygame.Surface) -> None:
@@ -566,6 +566,8 @@ class PlayScene(Scene):
         elif choice == "CREDITS":
             self._show_pause_info(constants.credits_config)
         elif choice == "QUIT":
+            # Salir desde la pausa termina la partida: el título vuelve a la ronda 1 (LC-RON-01).
+            ServiceLocator.game_state_service.reset_round()
             self.switch_scene(constants.title_scene)
 
     def _pause_info_action(self, action: CInputCommand) -> None:

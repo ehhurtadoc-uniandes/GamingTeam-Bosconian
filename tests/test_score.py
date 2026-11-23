@@ -43,6 +43,22 @@ class TestScore(unittest.TestCase):
         self.game_state.add_score(60)
         self.assertEqual(self.game_state.hi_score, 20050)
 
+    def test_reset_round_vuelve_a_la_ronda_1_y_conserva_lo_demas(self):
+        # LC-RON-01: fuera de juego la ronda es 1, pero el puntaje y las cuentas de la victoria siguen.
+        self.game_state.add_score(55000)
+        self.game_state.lives = 4
+        self.game_state.continues_used = 2
+        self.game_state.lives_lost = 3
+        self.game_state.level_index = 5
+        before = (self.game_state.score, self.game_state.hi_score, self.game_state.lives,
+                  self.game_state.next_extra_life, self.game_state.continues_used, self.game_state.lives_lost)
+        self.assertNotEqual(self.game_state.next_extra_life, self.game_state._lives_info["extra_life"]["first"])
+        self.game_state.reset_round()
+        self.assertEqual(self.game_state.level_index, 0)
+        after = (self.game_state.score, self.game_state.hi_score, self.game_state.lives,
+                 self.game_state.next_extra_life, self.game_state.continues_used, self.game_state.lives_lost)
+        self.assertEqual(after, before)
+
     def test_nueva_partida_conserva_el_hi_score(self):
         self.game_state.add_score(25000)
         self.game_state.new_game()

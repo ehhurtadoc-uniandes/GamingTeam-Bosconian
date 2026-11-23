@@ -152,6 +152,32 @@ class TestTitleScene(unittest.TestCase):
         play.start()
         self.assertEqual(play.level_index, 0)
 
+    def go_and_come_back(self, downs):
+        """Desde JUGAR baja downs opciones, entra y vuelve al título con volver."""
+        menu = get_menu(self.scene.ecs_world)
+        menu.selected = 0
+        for _ in range(downs):
+            self.press(pygame.K_DOWN)
+        self.press(pygame.K_z)
+        self.engine._handle_switch_scene()
+        self.engine._current_scene.process_events(key_event(pygame.KEYDOWN, pygame.K_ESCAPE))
+        self.engine._handle_switch_scene()
+        self.assertIs(self.engine._current_scene, self.scene)
+
+    def test_la_ronda_elegida_se_conserva_al_ir_a_instrucciones_y_creditos(self):
+        self.engine._current_scene = self.scene
+        self.press(pygame.K_DOWN)
+        for _ in range(3):
+            self.press(pygame.K_RIGHT)
+        self.go_and_come_back(downs=2)
+        self.go_and_come_back(downs=3)
+        self.assertEqual(ServiceLocator.game_state_service.level_index, 3)
+        self.assertIn("< RONDA 4 >", texts(self.scene.ecs_world))
+        get_menu(self.scene.ecs_world).selected = 0
+        self.press(pygame.K_z)
+        self.engine._handle_switch_scene()
+        self.assertEqual(self.engine._current_scene.level_index, 3)
+
     def test_ir_y_volver_cambia_de_escena_de_verdad(self):
         self.press(pygame.K_DOWN)
         self.press(pygame.K_DOWN)

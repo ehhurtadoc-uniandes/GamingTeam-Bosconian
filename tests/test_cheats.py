@@ -15,6 +15,7 @@ from src.ecs.systems.s_player_death import is_vulnerable, kill_player
 from src.engine.game_engine import GameEngine
 from src.engine.service_locator import ServiceLocator
 from src.engine.services.cheats_service import CheatsService
+from tests.test_level_clear import round_hud_texts
 
 DT = 1 / 60
 
@@ -144,6 +145,20 @@ class TestCheatsEnPlayScene(unittest.TestCase):
         self.engine._handle_switch_scene()
         self.world = self.scene.ecs_world
         self.assertIn(f"RONDA {1 % len(levels) + 1}", self.texts())
+
+    def test_n_desde_una_ronda_intermedia_muestra_la_siguiente_en_el_hud(self):
+        ServiceLocator.game_state_service.level_index = 2
+        self.engine._current_scene = self.scene
+        self.press(pygame.K_n)
+        self.engine._handle_switch_scene()
+        self.assertEqual(round_hud_texts(self.scene.ecs_world), ("ROUND", "4"))
+
+    def test_n_desde_la_ultima_ronda_lleva_a_la_victoria_y_vuelve_a_la_ronda_1(self):
+        levels = ServiceLocator.configs_service.get(ServiceLocator.constants_service.levels_config)["levels"]
+        ServiceLocator.game_state_service.level_index = len(levels) - 1
+        self.press(pygame.K_n)
+        self.assertEqual(self.engine._scene_name_to_switch, "victory")
+        self.assertEqual(ServiceLocator.game_state_service.level_index, 0)
 
     def test_n_no_salta_de_ronda_con_el_jugador_muerto(self):
         level_index = ServiceLocator.game_state_service.level_index

@@ -106,6 +106,8 @@ class TestPlayScenePause(unittest.TestCase):
         self.engine = GameEngine()
         self.addCleanup(pygame.quit)
         self.addCleanup(ServiceLocator.fonts_service.clear)
+        game_state = ServiceLocator.game_state_service
+        self.addCleanup(setattr, game_state, "level_index", game_state.level_index)
         self.scene = self.engine._scenes["play"]
         self.scene.start()
         self.scene.skip_blast_off()
@@ -252,6 +254,31 @@ class TestPauseMenu(TestPlayScenePause):
         self.press(pygame.K_UP)
         self.press(pygame.K_z)
         self.assertEqual(self.engine._scene_name_to_switch, "title")
+
+    def test_salir_al_titulo_vuelve_a_la_ronda_1(self):
+        ServiceLocator.game_state_service.level_index = 2
+        self.engine._current_scene = self.scene
+        self.press(pygame.K_p)
+        self.press(pygame.K_UP)
+        self.press(pygame.K_z)
+        self.assertEqual(ServiceLocator.game_state_service.level_index, 0)
+        self.engine._handle_switch_scene()
+        title_texts = {c.text for _, c in self.engine._current_scene.ecs_world.get_component(CText)}
+        self.assertIn("< RONDA 1 >", title_texts)
+
+    def test_las_vistas_de_la_pausa_no_cambian_la_ronda(self):
+        ServiceLocator.game_state_service.level_index = 2
+        self.press(pygame.K_p)
+        self.press(pygame.K_DOWN)
+        self.press(pygame.K_z)
+        self.press(pygame.K_ESCAPE)
+        self.press(pygame.K_DOWN)
+        self.press(pygame.K_z)
+        self.press(pygame.K_z)
+        self.press(pygame.K_p)
+        self.assertEqual(self.scene.state, PlayState.PLAYING)
+        self.assertIsNone(self.engine._scene_name_to_switch)
+        self.assertEqual(ServiceLocator.game_state_service.level_index, 2)
 
     def all_texts(self):
         return {c.text for _, c in self.world.get_component(CText)}
