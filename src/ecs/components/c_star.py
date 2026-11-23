@@ -2,10 +2,10 @@ class CStar:
     """Una estrella del fondo.
 
     parallax: qué fracción del movimiento de la cámara sigue (0.5 = la mitad, se ve más lejos).
-    visible y time_left: el parpadeo; cuando time_left llega a 0 se prende o se apaga.
+    alpha y rising: el brillo (LC-EST-02). alpha va de 0 a 255 y vuelve, subiendo si rising.
     """
 
-    def __init__(self, parallax: float, time_left: float, visible: bool = True) -> None:
+    def __init__(self, parallax: float, alpha: float, rising: bool) -> None:
         self.parallax = parallax
-        self.time_left = time_left
-        self.visible = visible
+        self.alpha = alpha
+        self.rising = rising

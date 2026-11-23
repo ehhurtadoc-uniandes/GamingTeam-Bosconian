@@ -44,14 +44,23 @@ def system_starfield_fall(world: esper.World, delta_time: float, fall_speed: flo
 
 
 def system_star_blink(world: esper.World, delta_time: float, blink_info: dict) -> None:
-    """Prende y apaga cada estrella al azar. Sola, deja las estrellas quietas pero brillando (pausa)."""
+    """Las estrellas brillan lentamente: su transparencia sube de 0 a 255 y baja, a una
+    velocidad fija (blink_info["speed"], en alpha por segundo) pero cada una a su tiempo (LC-EST-02).
+
+    Al pasar de 255 o de 0 rebota con lo que sobró del paso. Si se recortara al límite, cada
+    rebote perdería un poco distinto según el frame y las estrellas se irían sincronizando.
+
+    Sola, deja las estrellas quietas pero brillando (pausa).
+    """
+    speed = blink_info["speed"]
     c_s: CSurface
     c_star: CStar
     for _, (c_s, c_star) in world.get_components(CSurface, CStar):
-        c_star.time_left -= delta_time
-        if c_star.time_left <= 0:
-            c_star.visible = not c_star.visible
-            times = blink_info["on"] if c_star.visible else blink_info["off"]
-            c_star.time_left = random.uniform(times["min"], times["max"])
-            # Apagar es dejarla transparente: así system_rendering no necesita saber de estrellas.
-            c_s.surf.set_alpha(255 if c_star.visible else 0)
+        c_star.alpha += speed * delta_time if c_star.rising else -speed * delta_time
+        while not 0 <= c_star.alpha <= 255:
+            if c_star.alpha > 255:
+                c_star.alpha, c_star.rising = 510 - c_star.alpha, False
+            else:
+                c_star.alpha, c_star.rising = -c_star.alpha, True
+        # La transparencia va en la superficie: así system_rendering no necesita saber de estrellas.
+        c_s.surf.set_alpha(int(c_star.alpha))

@@ -10,6 +10,7 @@ from src.ecs.components.c_mine_blast import CMineBlast
 from src.ecs.components.c_obstacle import CObstacle, ObstacleKind
 from src.ecs.components.c_surface import CSurface
 from src.ecs.components.c_transform import CTransform
+from src.ecs.components.c_velocity import CVelocity
 from src.ecs.systems.s_animation import set_frame
 from src.engine.service_locator import ServiceLocator
 from src.utils.wrap import wrapped_delta
@@ -17,7 +18,10 @@ from src.utils.wrap import wrapped_delta
 
 def create_obstacle(world: esper.World, obstacles_info: dict, kind: ObstacleKind,
                     center: pygame.Vector2, rng: random.Random) -> int:
-    """Crea un obstáculo quieto con centro en center (coordenadas de mundo).
+    """Crea un obstáculo con centro en center (coordenadas de mundo).
+
+    Rocas y minas son quietas. Si el tipo trae "speed" (la roca indestructible, LC-OBS-03.1),
+    se mueve a esa rapidez en una dirección al azar; el wraparound la hace dar la vuelta al mundo.
 
     rng es el azar del nivel (con su semilla), para que la imagen elegida también salga
     siempre igual en ese nivel.
@@ -39,15 +43,22 @@ def create_obstacle(world: esper.World, obstacles_info: dict, kind: ObstacleKind
     margin = pygame.Vector2(info["hitbox_margin"], info["hitbox_margin"])
     world.add_component(entity, CHitBox(sprite_size - 2 * margin, margin, CollisionLayer.OBSTACLE))
     world.add_component(entity, CTransform(center - sprite_size / 2))
+    if "speed" in info:
+        direction = pygame.Vector2(1, 0).rotate(rng.uniform(0, 360))
+        world.add_component(entity, CVelocity(direction * info["speed"]))
     return entity
 
 
 def create_obstacles(world: esper.World, obstacles_info: dict, level_info: dict,
-                     world_size: pygame.Vector2, avoid: list[pygame.Vector2]) -> list[int]:
+                     world_size: pygame.Vector2, avoid: list[pygame.Vector2],
+                     avoid_areas: list[tuple[pygame.Vector2, pygame.Vector2]] = ()) -> list[int]:
     """Reparte al azar los obstáculos que pide level_info["obstacles"].
 
-    Ninguno queda a menos de min_distance de los puntos de avoid (bases, inicio del
-    jugador) ni de otro obstáculo. Con la misma "seed" el nivel siempre sale igual.
+    Ninguno queda a menos de min_distance de los puntos de avoid (inicio del jugador), del
+    borde de las áreas de avoid_areas (centro y tamaño del cuerpo de cada base) ni de otro
+    obstáculo. Las bases se miden por su borde y no por su centro: con 64 px de ancho, una
+    roca a min_distance del centro todavía podía quedar encima del cuerpo.
+    Con la misma "seed" el nivel siempre sale igual.
     """
     level_obstacles = level_info.get("obstacles")
     if not level_obstacles:
@@ -58,18 +69,28 @@ def create_obstacles(world: esper.World, obstacles_info: dict, level_info: dict,
     created = []
     for kind in ObstacleKind:
         for _ in range(level_obstacles.get(kind.value, 0)):
-            center = _free_position(rng, world_size, taken, min_distance)
+            center = _free_position(rng, world_size, taken, min_distance, avoid_areas)
             taken.append(center)
             created.append(create_obstacle(world, obstacles_info, kind, center, rng))
     return created
 
 
+def distance_to_area(pos: pygame.Vector2, center: pygame.Vector2, size: pygame.Vector2,
+                     world_size: pygame.Vector2 | None = None) -> float:
+    """Distancia de pos al borde del rectángulo (center, size), con wraparound. 0 si está adentro."""
+    delta = wrapped_delta(center, pos, world_size)
+    return pygame.Vector2(max(abs(delta.x) - size.x / 2, 0), max(abs(delta.y) - size.y / 2, 0)).length()
+
+
 def _free_position(rng: random.Random, world_size: pygame.Vector2, taken: list[pygame.Vector2],
-                   min_distance: float) -> pygame.Vector2:
+                   min_distance: float,
+                   avoid_areas: list[tuple[pygame.Vector2, pygame.Vector2]] = ()) -> pygame.Vector2:
     """Posición al azar lejos de lo que ya está ocupado, midiendo con wraparound."""
     for _ in range(ServiceLocator.constants_service.obstacle_place_tries):
         pos = pygame.Vector2(rng.uniform(0, world_size.x), rng.uniform(0, world_size.y))
-        if all(wrapped_delta(pos, other, world_size).length() >= min_distance for other in taken):
+        if (all(wrapped_delta(pos, other, world_size).length() >= min_distance for other in taken)
+                and all(distance_to_area(pos, center, size, world_size) >= min_distance
+                        for center, size in avoid_areas)):
             return pos
     return pos  # mundo muy lleno: se acepta la última
 

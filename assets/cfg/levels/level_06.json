@@ -1,0 +1,26 @@
+{
+  "core": { "mode": "cycling" },
+  "special": false,
+  "player_start": { "x": 512, "y": 800 },
+  "bases": [
+    { "pos": { "x": 512, "y": 160 }, "orientation": "horizontal" },
+    { "pos": { "x": 160, "y": 576 }, "orientation": "vertical" },
+    { "pos": { "x": 864, "y": 576 }, "orientation": "vertical" },
+    { "pos": { "x": 352, "y": 1024 }, "orientation": "horizontal" },
+    { "pos": { "x": 704, "y": 1312 }, "orientation": "horizontal" }
+  ],
+  "spawner": {
+    "initial_delay": 2.25,
+    "interval": 2.1,
+    "max_alive": 8,
+    "weights": { "I": 3, "P": 2, "E": 2 },
+    "wander_scale": 0.88
+  },
+  "obstacles": {
+    "seed": 6,
+    "min_distance": 40,
+    "rock": 42,
+    "solid_rock": 10,
+    "mine": 22
+  }
+}

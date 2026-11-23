@@ -23,7 +23,7 @@ from src.ecs.systems.s_starfield import system_starfield_fall
 from src.engine.game_engine import GameEngine
 from src.engine.service_locator import ServiceLocator
 
-BLINK = {"on": {"min": 10.0, "max": 10.0}, "off": {"min": 10.0, "max": 10.0}}
+BLINK = {"speed": 340}
 MENU = {
     "anchor": {"x": 100, "y": 50}, "line_height": 10, "alignment": "CENTER",
     "color": {"r": 255, "g": 255, "b": 255}, "selected_color": {"r": 255, "g": 230, "b": 80},
@@ -79,9 +79,9 @@ class TestStarfieldFall(unittest.TestCase):
         world = esper.World()
         view = pygame.Rect(0, 0, 100, 100)
         near = world.create_entity(CTransform(pygame.Vector2(10, 50)),
-                                   CSurface(pygame.Vector2(1, 1), pygame.Color(255, 255, 255)), CStar(0.5, 10))
+                                   CSurface(pygame.Vector2(1, 1), pygame.Color(255, 255, 255)), CStar(0.5, 100, True))
         far = world.create_entity(CTransform(pygame.Vector2(20, 99)),
-                                  CSurface(pygame.Vector2(1, 1), pygame.Color(255, 255, 255)), CStar(0.25, 10))
+                                  CSurface(pygame.Vector2(1, 1), pygame.Color(255, 255, 255)), CStar(0.25, 100, True))
         system_starfield_fall(world, 1.0, 20, view, BLINK)
         self.assertEqual(world.component_for_entity(near, CTransform).pos, pygame.Vector2(10, 60))
         self.assertEqual(world.component_for_entity(far, CTransform).pos, pygame.Vector2(20, 4))
