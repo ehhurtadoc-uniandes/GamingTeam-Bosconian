@@ -9,7 +9,8 @@
     "images": ["assets/img/solid_rock_1.png", "assets/img/solid_rock_2.png", "assets/img/solid_rock_3.png"],
     "destructible": false,
     "points": 0,
-    "hitbox_margin": 1
+    "hitbox_margin": 1,
+    "speed": 12
   },
   "mine": {
     "images": ["assets/img/mine.png"],

@@ -367,6 +367,25 @@ class TestErroresDeConfiguracion(CoreTestCase):
         self.assertEqual(self.world.get_component(CBase), [])
 
 
+TEST_LEVELS = ("assets/cfg/levels/level_test.json", "assets/cfg/levels/level_test_cycling.json")
+
+
+class TestModoDeLasRondas(unittest.TestCase):
+    """Las 10 rondas de levels.json eligen su modo de núcleo, y hay de los dos."""
+
+    def test_cada_ronda_declara_un_modo_valido_y_hay_de_los_dos(self):
+        levels = json.loads((ROOT / "assets/cfg/levels.json").read_text(encoding="utf-8"))["levels"]
+        modes = []
+        for path in levels:
+            info = json.loads((ROOT / path).read_text(encoding="utf-8"))
+            self.assertIn("core", info, path)
+            modes.append(parse_core_mode(info))
+        self.assertEqual(set(modes), {CoreMode.STATIC, CoreMode.CYCLING})
+        # La dificultad sube: una vez que el núcleo empieza a ciclar, sigue ciclando en las rondas siguientes.
+        first_cycling = modes.index(CoreMode.CYCLING)
+        self.assertTrue(all(m == CoreMode.CYCLING for m in modes[first_cycling:]))
+
+
 class TestNucleoEnPlayScene(unittest.TestCase):
     def setUp(self):
         warnings.filterwarnings("ignore", message="no fast renderer")
@@ -375,6 +394,11 @@ class TestNucleoEnPlayScene(unittest.TestCase):
         self.addCleanup(ServiceLocator.fonts_service.clear)
         self.addCleanup(setattr, ServiceLocator.game_state_service, "level_index", 0)
         self.scene = self.engine._scenes["play"]
+        # Las pruebas juegan los dos niveles de prueba (static y cycling), que no son rondas del juego:
+        # se ponen como rondas 1 y 2 en la configuración cargada y se devuelve la lista real al terminar.
+        levels_info = ServiceLocator.configs_service.get(ServiceLocator.constants_service.levels_config)
+        self.addCleanup(levels_info.__setitem__, "levels", levels_info["levels"])
+        levels_info["levels"] = list(TEST_LEVELS)
 
     def start_level(self, index):
         ServiceLocator.game_state_service.level_index = index

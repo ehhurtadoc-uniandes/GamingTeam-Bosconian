@@ -596,7 +596,7 @@ class TestAlertaEnPlayScene(unittest.TestCase):
         self.addCleanup(info.pop, "alert", None)
         info["alert"] = {"green_duration": -1}
         ServiceLocator.game_state_service.level_index = 0
-        with self.assertRaisesRegex(ValueError, r"level_test.json: alert.green_duration"):
+        with self.assertRaisesRegex(ValueError, r"levels/level_01.json: alert.green_duration"):
             self.scene.start()
 
 

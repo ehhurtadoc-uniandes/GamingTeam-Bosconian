@@ -35,11 +35,11 @@ hoy 1024 x 1536) y son el **centro** de lo que se crea.
 | `alert` | no | Tiempos y multiplicadores de la alerta solo para este nivel. Lo que no traiga sale de `assets/cfg/alerts.json`. Ver abajo. |
 | `obstacles` | no | Cuántos obstáculos de cada tipo se reparten al azar por el mundo. |
 | `obstacles.seed` | no | Semilla del azar: con la misma semilla el nivel siempre sale igual. |
-| `obstacles.min_distance` | no | Distancia mínima entre obstáculos, bases e inicio del jugador (por defecto 32). |
+| `obstacles.min_distance` | no | Distancia mínima entre obstáculos, al borde del cuerpo de las bases y al inicio del jugador (por defecto 32). |
 | `obstacles.rock` / `solid_rock` / `mine` | no | Cantidad de rocas, rocas indestructibles y minas. |
 
-Los tipos de obstáculo (imágenes, puntos, hitbox, animación y explosión de la mina) están en
-`assets/cfg/obstacles.json`.
+Los tipos de obstáculo (imágenes, puntos, hitbox, animación, explosión de la mina y rapidez
+de la roca indestructible, `speed`) están en `assets/cfg/obstacles.json`.
 
 ## Núcleo de las bases (`core`, #27)
 
@@ -76,15 +76,38 @@ El modo se elige por nivel; el aspecto y los tiempos están en `assets/cfg/base.
 Un `mode` desconocido, una duración que falte o no sea mayor que 0, o un estado sin `image`/`color`
 dan un error al cargar el nivel que nombra el archivo y el campo.
 
+### Modo de cada ronda
+
+| Rondas | `core.mode` |
+| --- | --- |
+| 1 a 3 | `static`: el núcleo está siempre abierto y no lanza enemigos |
+| 4 a 10 | `cycling`: el núcleo se abre, lanza un E y se cierra |
+
+Así la dificultad sube con la ronda, como pide `LC-BAS-06.1`.
+
 ### Niveles de prueba
 
-`assets/cfg/levels.json` lista dos niveles de prueba, con una base horizontal y otra vertical cada uno:
+`level_test.json` (`static`) y `level_test_cycling.json` (`cycling`) tienen una base horizontal y otra
+vertical cada uno. No están en `levels.json`: los usan las pruebas. Para jugarlos, se ponen en la lista.
 
-1. `level_test.json`: `"core": { "mode": "static" }`.
-2. `level_test_cycling.json`: el mismo nivel con `"core": { "mode": "cycling" }`.
+## levels.json
 
-Para jugarlos, en la pantalla de título se elige la ronda con izquierda/derecha (RONDA 1 o RONDA 2)
-y se acepta JUGAR; la ronda elegida es `PlayScene.level_index`, el índice en `levels.json`.
+```json
+{
+  "clear_delay": 2.0,
+  "round_hud": { "label": { "...": "texto ROUND" }, "value": { "...": "número" } },
+  "levels": ["assets/cfg/levels/level_01.json", "..."]
+}
+```
+
+| Clave | Qué es |
+|---|---|
+| `levels` | Los niveles en orden. La ronda que se muestra es la posición en esta lista (la primera es la ronda 1). |
+| `clear_delay` | Segundos que se espera, al destruir todas las bases, antes de pasar a la siguiente ronda (para que terminen las explosiones). |
+| `round_hud` | Texto "ROUND" y su número, abajo en la columna del HUD: `anchor`, `alignment` y `color` de cada uno. |
+
+Después de la última ronda se vuelve al título mientras no exista la escena de victoria (#36).
+`level_test.json` ya no está en la lista; queda como nivel de prueba.
 
 ## Alerta VERDE, AMARILLA y ROJA (`alert`, #29)
 
@@ -122,11 +145,8 @@ El bloque `alert` del nivel solo puede traer las cinco primeras claves; sonidos 
 que 1, una clave que no se puede cambiar por nivel o un sonido que no existe dan un error al cargar el
 nivel que nombra el archivo y el campo.
 
-## Claves que vienen después (semana 3)
+## Claves que pueden venir después
 
-Se agregarán sin romper los niveles que ya existen:
-
-- `round`: número de ronda que muestra la interfaz "ROUND X".
 - `music`: ruta de la música del nivel.
 
 Si su área necesita otra clave en el nivel, avísenle a Catalina para agregarla aquí.

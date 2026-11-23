@@ -13,6 +13,7 @@ from src.create.prefab_menu import create_menu, create_text_lines
 from src.create.prefab_minimap import create_minimap
 from src.create.prefab_obstacle import create_obstacles
 from src.create.prefab_player import create_player
+from src.create.prefab_round import create_round_hud
 from src.create.prefab_special_message import create_special_shot_message
 from src.create.prefab_stars import create_starfield
 from src.create.prefab_text import create_interface_text
@@ -41,11 +42,13 @@ from src.ecs.systems.s_enemy_bounce import system_enemy_bounce
 from src.ecs.systems.s_enemy_spawner import system_enemy_spawner
 from src.ecs.systems.s_enemy_state import system_enemy_state
 from src.ecs.systems.s_explosion_burst import system_explosion_burst
+from src.ecs.systems.s_level import level_cleared
 from src.ecs.systems.s_lifetime import system_lifetime
 from src.ecs.systems.s_lives_hud import system_lives_hud
 from src.ecs.systems.s_minimap import system_minimap
 from src.ecs.systems.s_movement import system_movement
-from src.ecs.systems.s_obstacles import system_mine_blast, system_player_bullet_obstacle
+from src.ecs.systems.s_obstacles import (system_enemy_obstacle, system_mine_blast, system_obstacle_bounce,
+                                        system_player_bullet_obstacle)
 from src.ecs.systems.s_offscreen_despawn import system_offscreen_despawn
 from src.ecs.systems.s_pause import system_pause_visibility
 from src.ecs.systems.s_menu import get_menu, move_selection, selected_action, system_menu_highlight
@@ -95,11 +98,13 @@ class PlayState(Enum):
     - PLAYING: el juego corre.
     - PAUSED: todo se congela menos el parpadeo de las estrellas y se ve el menú de pausa.
     - PAUSED_INFO: sigue en pausa, mostrando las instrucciones o los créditos (LC-ESC-04.3.5).
+    - CLEARED: ya no quedan bases (LC-ESC-04.4). Se dejan terminar las explosiones y se pasa de nivel.
     """
     PLAYING = 0
     PAUSED = 1
     PAUSED_INFO = 2
     STARTING = 3
+    CLEARED = 4
 
 
 class PlayScene(Scene):
@@ -143,10 +148,21 @@ class PlayScene(Scene):
         self._respawn_info: dict = {}
         self._player_spawn_pos = pygame.Vector2(0, 0)
         self._alert_hud_info: dict = {}
+        self._clear_time = 0.0
+        # Escena pedida en el último switch_scene: al volver a crear la escena de juego (paso de
+        # ronda o trampa N) se conservan las direcciones presionadas; viniendo de otra escena, no.
+        self._switching_to: str | None = None
+
+    def switch_scene(self, new_scene_name: str) -> None:
+        self._switching_to = new_scene_name
+        super().switch_scene(new_scene_name)
 
     def do_create(self) -> None:
         constants = ServiceLocator.constants_service
-        self._held_direction_keys.clear()
+        keep_directions = self._switching_to == constants.play_scene
+        self._switching_to = None
+        if not keep_directions:
+            self._held_direction_keys.clear()
         self.level_index = ServiceLocator.game_state_service.level_index
         self.state = PlayState.PLAYING
         self._blast_off_info = ServiceLocator.configs_service.get(constants.blast_off_config)
@@ -169,6 +185,8 @@ class PlayScene(Scene):
                                             self._has_special_shot or special_cheat)
         if self._has_special_shot:
             create_special_shot_message(self.ecs_world, player_info["special_shot"])
+        if keep_directions:
+            self._restore_held_directions()
         player_center = pos + pygame.Vector2(size["w"], size["h"]) / 2
         create_camera(self.ecs_world, world_info["camera"], self.world_size, player_center)
         self._stars_info = ServiceLocator.configs_service.get(constants.stars_config)
@@ -179,12 +197,27 @@ class PlayScene(Scene):
         create_lives_hud(self.ecs_world, score_info["lives"]["hud"])
         create_minimap(self.ecs_world, ServiceLocator.configs_service.get(constants.minimap_config))
         create_alert_hud(self.ecs_world, self._alert_hud_info)
+        self._levels_info = ServiceLocator.configs_service.get(constants.levels_config)
+        # La ronda se muestra desde 1; level_index empieza en 0.
+        create_round_hud(self.ecs_world, self._levels_info["round_hud"], self.level_index + 1)
         self._start_blast_off()
         self._cheat_message = None
         if self._pending_cheat_message is not None:
             cheat, values = self._pending_cheat_message
             self._pending_cheat_message = None
             self._show_cheat_message(cheat, **values)
+
+    def _restore_held_directions(self) -> None:
+        """Las flechas que seguían presionadas al cambiar de ronda mueven a la nave de la ronda nueva.
+
+        Los comandos del mundo nuevo empiezan sin presionar: se marcan en START para que el
+        KEYUP (o el regreso del stick al centro) que llegue después los suelte.
+        """
+        c_input: CInputCommand
+        for _, c_input in self.ecs_world.get_component(CInputCommand):
+            if (c_input.name, c_input.key) in self._held_direction_keys:
+                c_input.phase = CommandPhase.START
+        self._update_player_direction()
 
     def _create_level(self) -> None:
         """Crea las entidades del nivel actual según su JSON: bases, spawner de enemigos y obstáculos.
@@ -214,10 +247,13 @@ class PlayScene(Scene):
         alerts_info = ServiceLocator.configs_service.get(constants.alerts_config)
         self._alert_hud_info = load_alert_hud(alerts_info, constants.alerts_config)
         create_alert(self.ecs_world, alerts_info, constants.alerts_config, level_info, level_path)
-        # Los obstáculos no aparecen encima de las bases ni del jugador.
-        avoid = [self._player_start] + [self._center_of(base) for base in bases]
+        # Los obstáculos no aparecen encima de las bases ni del jugador. Las bases cuentan por su cuerpo.
+        bases_areas = [(self._center_of(base),
+                        pygame.Vector2(self.ecs_world.component_for_entity(base, CSurface).area.size))
+                       for base in bases]
         self._obstacles_info = ServiceLocator.configs_service.get(constants.obstacles_config)
-        create_obstacles(self.ecs_world, self._obstacles_info, level_info, self.world_size, avoid)
+        create_obstacles(self.ecs_world, self._obstacles_info, level_info, self.world_size,
+                         [self._player_start], bases_areas)
 
     def _center_of(self, entity: int) -> pygame.Vector2:
         c_t = self.ecs_world.component_for_entity(entity, CTransform)
@@ -227,6 +263,9 @@ class PlayScene(Scene):
     def do_update(self, delta_time: float) -> None:
         if self.state == PlayState.STARTING:
             self._update_blast_off(delta_time)
+            return
+        if self.state == PlayState.CLEARED:
+            self._update_level_clear(delta_time)
             return
         if self.state != PlayState.PLAYING:
             # En pausa nada se mueve; las estrellas siguen brillando quietas (LC-ESC-04.3.2).
@@ -267,6 +306,7 @@ class PlayScene(Scene):
         system_turret(self.ecs_world, delta_time, player_center, self._bullet_info, self.world_size)
         system_movement(self.ecs_world, delta_time)
         system_enemy_bounce(self.ecs_world, self.world_size)
+        system_obstacle_bounce(self.ecs_world, self.world_size)
         # Justo después de mover: lo que salió por un borde vuelve por el opuesto.
         system_wraparound(self.ecs_world, self.world_size)
         # La cámara sigue al jugador ya movido, para que no se vea un frame atrasada.
@@ -280,6 +320,7 @@ class PlayScene(Scene):
         system_offscreen_despawn(self.ecs_world, camera=get_camera(self.ecs_world))
         system_enemy_bullet_collision(self.ecs_world, self.world_size)
         system_player_bullet_obstacle(self.ecs_world, self._obstacles_info, self.world_size)
+        system_enemy_obstacle(self.ecs_world, self._obstacles_info, self.world_size)
         # Después de las balas de torreta (un enemigo que ya mató una torreta no da puntos) y de los
         # obstáculos. Antes de la muerte del jugador: si la bala mata al enemigo que lo tocaba, sobrevive.
         system_player_bullet_enemy(self.ecs_world, self.world_size)
@@ -298,6 +339,42 @@ class PlayScene(Scene):
         system_lives_hud(self.ecs_world)
         system_alert_hud(self.ecs_world)
         system_minimap(self.ecs_world, delta_time, self.world_size)
+        # Si el jugador murió sin vidas, la partida terminó aunque haya caído la última base
+        # (p. ej. con una bala que seguía en vuelo): se va a la derrota, no a la siguiente ronda.
+        if level_cleared(self.ecs_world) and not self._game_over_pending():
+            self.state = PlayState.CLEARED
+            self._clear_time = self._levels_info["clear_delay"]
+
+    def _game_over_pending(self) -> bool:
+        c_dead: CPlayerDead
+        return any(c_dead.game_over for _, c_dead in self.ecs_world.get_component(CPlayerDead))
+
+    def _update_level_clear(self, delta_time: float) -> None:
+        """Sin bases: las explosiones terminan de animarse y, pasado clear_delay, se pasa de nivel."""
+        system_star_blink(self.ecs_world, delta_time, self._stars_info["blink"])
+        system_explosion_burst(self.ecs_world, delta_time)
+        system_animation(self.ecs_world, delta_time)
+        system_lifetime(self.ecs_world, delta_time)
+        system_score_hud(self.ecs_world)
+        system_minimap(self.ecs_world, delta_time, self.world_size)
+        self._clear_time -= delta_time
+        if self._clear_time <= 0:
+            self.next_level()
+
+    def next_level(self) -> None:
+        """Pasa a la siguiente ronda (#26). El puntaje y las vidas siguen en GameStateService.
+
+        Después de la última ronda se vuelve al título desde la primera, mientras no exista
+        la escena de victoria (#36).
+        """
+        constants = ServiceLocator.constants_service
+        game_state = ServiceLocator.game_state_service
+        game_state.level_index += 1
+        if game_state.level_index < len(self._levels_info["levels"]):
+            self.switch_scene(constants.play_scene)
+        else:
+            game_state.level_index = 0
+            self.switch_scene(constants.title_scene)
 
     def do_draw(self, screen: pygame.Surface) -> None:
         super().do_draw(screen)
@@ -329,8 +406,8 @@ class PlayScene(Scene):
         elif action.phase == CommandPhase.START and self._event_consumed:
             # Esta misma pulsación ya cambió la pausa con otro comando.
             return
-        elif self.state == PlayState.STARTING:
-            # Durante el BLAST OFF no se dispara ni se pausa; las flechas sí se registran (arriba)
+        elif self.state in (PlayState.STARTING, PlayState.CLEARED):
+            # Durante el BLAST OFF y al pasar de nivel no se dispara ni se pausa; las flechas sí se registran (arriba)
             # para que la nave salga en la dirección que se mantiene presionada.
             return
         elif self.state == PlayState.PAUSED:
