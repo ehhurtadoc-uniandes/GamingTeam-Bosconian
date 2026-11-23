@@ -10,6 +10,7 @@ from src.ecs.components.c_base_part import CBasePart
 from src.ecs.components.c_hitbox import CHitBox, CollisionLayer
 from src.ecs.components.c_transform import CTransform
 from src.ecs.components.c_velocity import CVelocity
+from src.ecs.systems.s_alert import record_base_destroyed
 from src.ecs.systems.s_collision import hitbox_center, system_collision
 from src.engine.service_locator import ServiceLocator
 from src.utils.wrap import wrapped_delta
@@ -35,9 +36,12 @@ def destroy_base(world: esper.World, base: int, points_info: dict) -> int:
 
     Devuelve los puntos del premio de la base (points_info["base"]). Es idempotente:
     si la base ya se destruyó en este paso devuelve 0 y no crea más explosiones.
+    Cada destrucción real queda registrada para la alerta (#29), que la procesa al
+    comienzo del paso siguiente.
     """
     if not world.entity_exists(base):
         return 0
+    record_base_destroyed(world)
     c_base = world.component_for_entity(base, CBase)
     for piece in [*c_base.turrets, c_base.core]:
         if world.entity_exists(piece):

@@ -14,9 +14,9 @@ class CEnemySpawner:
     - wander_scale: cuánto se desvían los enemigos de este nivel (LC-ENE-02.1).
       1 es lo de enemies.json; menos de 1 persiguen más directo.
 
-    Los dejará el sistema de alertas (#29):
-    - active: en alerta VERDE no salen enemigos.
-    - rate_multiplier: en alerta ROJA salen al doble de ritmo (2.0).
+    Los fija system_alert (#29) en cada paso:
+    - active: en alerta VERDE no salen enemigos y time_to_spawn queda congelado.
+    - rate_multiplier: en alerta ROJA el temporizador avanza red_rate_multiplier veces más rápido.
     """
 
     def __init__(self, spawner_info: dict) -> None:

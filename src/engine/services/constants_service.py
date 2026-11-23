@@ -36,6 +36,7 @@ class ConstantsService:
         self.defeat_config = "assets/cfg/defeat.json"
         self.obstacles_config = "assets/cfg/obstacles.json"
         self.minimap_config = "assets/cfg/minimap.json"
+        self.alerts_config = "assets/cfg/alerts.json"
 
         # Delta máximo de un frame, en segundos: dos frames a 60 FPS. Ver GameEngine._calculate_time.
         # Con más, una bala y un enemigo que van de frente (~100 px/s cada uno) podrían cruzarse
