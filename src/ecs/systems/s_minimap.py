@@ -3,6 +3,7 @@ import esper
 import pygame
 
 from src.ecs.components.c_minimap import CMinimap
+from src.ecs.components.c_pickup import CPickup
 from src.ecs.components.c_surface import CSurface
 from src.ecs.components.c_transform import CTransform
 from src.ecs.components.tags.c_tag_base import CTagBase
@@ -27,6 +28,7 @@ def system_minimap(world: esper.World, delta_time: float, world_size: pygame.Vec
     destruidas ya no existen, así que desaparecen solas. El jugador parpadea.
     """
     bases = [_center(c_t, c_s) for _, (c_t, c_s, _) in world.get_components(CTransform, CSurface, CTagBase)]
+    pickups = [_center(c_t, c_s) for _, (c_t, c_s, _) in world.get_components(CTransform, CSurface, CPickup)]
     players = [_center(c_t, c_s) for _, (c_t, c_s, _) in world.get_components(CTransform, CSurface, CTagPlayer)]
     c_s: CSurface
     c_minimap: CMinimap
@@ -36,6 +38,8 @@ def system_minimap(world: esper.World, delta_time: float, world_size: pygame.Vec
         c_s.surf.fill(c_minimap.bg_color)
         for center in bases:
             _draw_dot(c_s.surf, to_minimap(center, world_size, size), c_minimap.dot_size, c_minimap.base_color)
+        for center in pickups:
+            _draw_dot(c_s.surf, to_minimap(center, world_size, size), c_minimap.dot_size, c_minimap.pickup_color)
         if int(c_minimap.blink_time / c_minimap.player_blink) % 2 == 0:
             for center in players:
                 _draw_dot(c_s.surf, to_minimap(center, world_size, size), c_minimap.dot_size,

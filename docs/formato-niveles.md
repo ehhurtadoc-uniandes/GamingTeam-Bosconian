@@ -7,6 +7,7 @@ hoy 1024 x 1536) y son el **centro** de lo que se crea.
 ```json
 {
   "special": true,
+  "pickup": { "chance": 0.5, "interval": 20.0 },
   "core": { "mode": "cycling" },
   "player_start": { "x": 512, "y": 768 },
   "bases": [
@@ -28,6 +29,7 @@ hoy 1024 x 1536) y son el **centro** de lo que se crea.
 | Clave | Obligatoria | Qué es |
 |---|---|---|
 | `special` | no | `true` si el nivel da la habilidad especial (tres balas al frente y una atrás); sin la clave, no la da. Al empezar el nivel sale el mensaje de `assets/cfg/player.json` > `special_shot`. |
+| `pickup` | no | Con qué frecuencia aparece en el mundo el ítem del escudo (segunda habilidad, tecla X). Cada `interval` segundos se tira el azar y, con probabilidad `chance` (0 a 1), aparece un ítem si no hay otro. Sin la clave, el nivel no tiene ítems. El ítem se ve en el minimapa como un punto amarillo. La duración del escudo, el cooldown, las cargas máximas y el aspecto del ítem están en `assets/cfg/player.json` > `ability`. |
 | `core.mode` | no | Cómo se comporta el núcleo de **todas** las bases del nivel: `static` (siempre abierto, no lanza enemigos) o `cycling` (se abre y se cierra, y cada vez que termina de abrirse lanza un enemigo E). Sin el bloque `core` o sin `mode`, `static`. Ver abajo. |
 | `player_start` | no | Dónde empieza el jugador. Si falta, en el centro de la pantalla. |
 | `bases` | no | Lista de bases (sin la clave, el nivel no tiene bases): centro (`pos`) y `orientation` (`horizontal` o `vertical`). La usa `create_bases`. |

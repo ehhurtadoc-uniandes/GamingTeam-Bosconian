@@ -1,6 +1,7 @@
 {
   "core": { "mode": "static" },
   "special": false,
+  "pickup": { "chance": 0.55, "interval": 22.0 },
   "player_start": { "x": 512, "y": 640 },
   "bases": [
     { "pos": { "x": 192, "y": 256 }, "orientation": "horizontal" },

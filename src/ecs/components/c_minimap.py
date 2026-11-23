@@ -11,6 +11,7 @@ class CMinimap:
         self.bg_color = _color(minimap_info["bg_color"])
         self.base_color = _color(minimap_info["base_color"])
         self.player_color = _color(minimap_info["player_color"])
+        self.pickup_color = _color(minimap_info["pickup_color"])
         self.dot_size = minimap_info["dot_size"]
         self.player_blink = minimap_info["player_blink"]
         self.blink_time = 0.0

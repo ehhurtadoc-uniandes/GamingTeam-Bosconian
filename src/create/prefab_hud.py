@@ -3,6 +3,7 @@ import esper
 import pygame
 
 from src.create.prefab_text import create_interface_text
+from src.ecs.components.c_ability_text import CAbilityText
 from src.ecs.components.c_lives_counter import CLivesCounter
 from src.ecs.components.c_lives_icons import CLivesIcons
 from src.ecs.components.c_surface import CSurface
@@ -34,3 +35,9 @@ def create_lives_hud(world: esper.World, lives_hud_info: dict) -> None:
                         CLivesIcons(icons_info, max_visible), CTagUI())
     counter = create_interface_text(world, "", lives_hud_info["counter"])
     world.add_component(counter, CLivesCounter(max_visible))
+
+
+def create_ability_hud(world: esper.World, hud_info: dict) -> None:
+    create_interface_text(world, hud_info["label"]["text"], hud_info["label"])
+    value = create_interface_text(world, "", hud_info["value"])
+    world.add_component(value, CAbilityText())

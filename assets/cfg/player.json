@@ -18,6 +18,29 @@
       "speed": 80
     }
   },
+  "ability": {
+    "max_charges": 3,
+    "start_charges": 0,
+    "duration": 5.0,
+    "cooldown": 10.0,
+    "warning_time": 1.5,
+    "blink_interval": 0.12,
+    "aura_image": "assets/img/shield.png",
+    "pickup": {
+      "image": "assets/img/shield_item.png",
+      "hitbox": { "size": { "w": 10, "h": 10 } },
+      "lifetime": 40.0,
+      "spawn": { "min_player_distance": 80, "base_margin": 16, "place_tries": 100 }
+    },
+    "hud": {
+      "label": { "text": "SHIELD", "anchor": { "x": 224, "y": 180 }, "alignment": "CENTER",
+                 "color": { "r": 80, "g": 220, "b": 255 } },
+      "value": { "anchor": { "x": 224, "y": 189 }, "alignment": "CENTER",
+                 "color": { "r": 255, "g": 255, "b": 255 } },
+      "active_text": "ON",
+      "charges_format": "x{charges}"
+    }
+  },
   "special_shot": {
     "forward_bullets": 3,
     "spread_degrees": 12,
