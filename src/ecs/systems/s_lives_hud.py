@@ -14,7 +14,10 @@ def lives_icons_surface(count: int, c_icons: CLivesIcons) -> pygame.Surface:
     width = max(0, count * step - c_icons.spacing)
     surface = pygame.Surface((width, c_icons.icon_size.y), pygame.SRCALPHA)
     for i in range(count):
-        surface.fill(c_icons.color, pygame.Rect((i * step, 0), c_icons.icon_size))
+        if c_icons.image is not None:
+            surface.blit(c_icons.image, (i * step, 0))
+        else:
+            surface.fill(c_icons.color, pygame.Rect((i * step, 0), c_icons.icon_size))
     return surface
 
 
