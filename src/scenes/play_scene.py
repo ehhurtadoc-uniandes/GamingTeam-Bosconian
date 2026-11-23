@@ -114,8 +114,9 @@ class PlayState(Enum):
 class PlayScene(Scene):
     """Escena de juego. Crea al jugador; cada área agrega aquí sus entidades y sistemas.
 
-    Con debug.json "enabled", las teclas 1, 2 y 3 crean enemigos I, P y E y se dibuja
-    su tipo y estado encima de cada uno.
+    Con debug.json "enabled", las teclas 1, 2 y 3 crean enemigos I, P y E. La tecla H
+    muestra las hitboxes, la ayuda de las teclas y el tipo y estado de cada enemigo;
+    sin H el juego se ve como el original.
     """
 
     def __init__(self, game_engine) -> None:
@@ -399,19 +400,19 @@ class PlayScene(Scene):
     def do_draw(self, screen: pygame.Surface) -> None:
         super().do_draw(screen)
         # En pausa los enemigos no se ven, así que tampoco sus etiquetas.
-        if not self._debug_info["enabled"] or self.state != PlayState.PLAYING:
+        if not self._debug_info["enabled"] or self.state != PlayState.PLAYING or not self._show_hitboxes:
             return
         font = ServiceLocator.fonts_service.get(self._debug_info["font"], self._debug_info["font_size"])
         c = self._debug_info["label_color"]
         color = pygame.Color(c["r"], c["g"], c["b"])
         system_enemy_labels(self.ecs_world, screen, font, color, get_camera(self.ecs_world))
-        if self._show_hitboxes:
-            h = self._debug_info["hitbox_color"]
-            system_debug_hitboxes(self.ecs_world, screen, pygame.Color(h["r"], h["g"], h["b"]),
-                                  get_camera(self.ecs_world))
+        h = self._debug_info["hitbox_color"]
+        system_debug_hitboxes(self.ecs_world, screen, pygame.Color(h["r"], h["g"], h["b"]),
+                              get_camera(self.ecs_world))
         help_pos = self._debug_info["help_pos"]
-        help_text = ServiceLocator.texts_service.get(font, self._debug_info["help_text"], color)
-        screen.blit(help_text, (help_pos["x"], help_pos["y"]))
+        for i, line in enumerate(self._debug_info["help_lines"]):
+            help_text = ServiceLocator.texts_service.get(font, line, color)
+            screen.blit(help_text, (help_pos["x"], help_pos["y"] + i * self._debug_info["help_line_height"]))
 
     def do_action(self, action: CInputCommand) -> None:
         constants = ServiceLocator.constants_service

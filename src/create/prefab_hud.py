@@ -10,6 +10,7 @@ from src.ecs.components.c_surface import CSurface
 from src.ecs.components.c_score_text import CScoreText, ScoreKind
 from src.ecs.components.c_transform import CTransform
 from src.ecs.components.tags.c_tag_ui import CTagUI
+from src.engine.service_locator import ServiceLocator
 
 
 def create_score_hud(world: esper.World, hud_info: dict) -> None:
@@ -31,8 +32,12 @@ def create_lives_hud(world: esper.World, lives_hud_info: dict) -> None:
     icons_info = lives_hud_info["icons"]
     anchor = icons_info["anchor"]
     empty = pygame.Surface((0, 0), pygame.SRCALPHA)
+    c_icons = CLivesIcons(icons_info, max_visible)
+    if "image" in icons_info:
+        image = ServiceLocator.images_service.get(icons_info["image"])
+        c_icons.image = pygame.transform.scale(image, c_icons.icon_size)
     world.create_entity(CTransform(pygame.Vector2(anchor["x"], anchor["y"])), CSurface.from_surface(empty),
-                        CLivesIcons(icons_info, max_visible), CTagUI())
+                        c_icons, CTagUI())
     counter = create_interface_text(world, "", lives_hud_info["counter"])
     world.add_component(counter, CLivesCounter(max_visible))
 

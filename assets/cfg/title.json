@@ -1,23 +1,31 @@
 {
   "music": "TITLE",
-  "title": {
-    "text": "PROYECTO FINAL",
+  "tagline": {
+    "text": "STAR DESTROYER",
+        "anchor": {
+      "x": 80,
+      "y": 24
+    },
+    "alignment": "LEFT",
+    "color": {
+      "r": 220,
+      "g": 40,
+      "b": 30
+    },
+    "blink": 0.5
+  },
+  "logo": {
+    "image": "assets/img/title_logo.png",
     "anchor": {
       "x": 128,
-      "y": 40
-    },
-    "alignment": "CENTER",
-    "color": {
-      "r": 255,
-      "g": 60,
-      "b": 60
+      "y": 6
     }
   },
   "subtitle": {
     "text": "MISW4407",
     "anchor": {
       "x": 128,
-      "y": 54
+      "y": 90
     },
     "alignment": "CENTER",
     "color": {
@@ -29,7 +37,7 @@
   "menu": {
     "anchor": {
       "x": 128,
-      "y": 96
+      "y": 108
     },
     "line_height": 16,
     "alignment": "CENTER",

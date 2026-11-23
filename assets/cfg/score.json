@@ -3,24 +3,24 @@
   "hud": {
     "score_label": {
       "text": "1UP",
-      "anchor": { "x": 148, "y": 4 },
-      "alignment": "CENTER",
-      "color": { "r": 255, "g": 60, "b": 60 }
+      "anchor": { "x": 194, "y": 21 },
+      "alignment": "LEFT",
+      "color": { "r": 255, "g": 255, "b": 255 }
     },
     "score_value": {
-      "anchor": { "x": 148, "y": 14 },
-      "alignment": "CENTER",
+      "anchor": { "x": 255, "y": 30 },
+      "alignment": "RIGHT",
       "color": { "r": 255, "g": 255, "b": 255 }
     },
     "hi_score_label": {
       "text": "HI-SCORE",
-      "anchor": { "x": 212, "y": 4 },
+      "anchor": { "x": 224, "y": 2 },
       "alignment": "CENTER",
       "color": { "r": 255, "g": 60, "b": 60 }
     },
     "hi_score_value": {
-      "anchor": { "x": 212, "y": 14 },
-      "alignment": "CENTER",
+      "anchor": { "x": 255, "y": 11 },
+      "alignment": "RIGHT",
       "color": { "r": 255, "g": 255, "b": 255 }
     }
   },
@@ -30,14 +30,15 @@
     "hud": {
       "max_visible": 4,
       "icons": {
-        "anchor": { "x": 4, "y": 196 },
-        "size": { "w": 8, "h": 8 },
-        "spacing": 2,
+        "anchor": { "x": 194, "y": 178 },
+        "image": "assets/img/player.png",
+        "size": { "w": 10, "h": 12 },
+        "spacing": 1,
         "color": { "r": 80, "g": 160, "b": 255 }
       },
       "counter": {
-        "anchor": { "x": 46, "y": 196 },
-        "alignment": "LEFT",
+        "anchor": { "x": 255, "y": 184 },
+        "alignment": "RIGHT",
         "color": { "r": 255, "g": 255, "b": 255 }
       }
     }

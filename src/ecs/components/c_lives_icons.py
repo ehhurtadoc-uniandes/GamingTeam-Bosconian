@@ -11,4 +11,6 @@ class CLivesIcons:
         self.color = pygame.Color(color["r"], color["g"], color["b"])
         self.spacing: int = icons_info["spacing"]
         self.max_visible = max_visible
+        # Si score.json trae "image", cada vida se dibuja con esa imagen en vez de un cuadrado.
+        self.image: pygame.Surface | None = None
         self.shown: int | None = None
