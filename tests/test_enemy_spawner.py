@@ -170,9 +170,10 @@ class TestSpawnerEnPlayScene(unittest.TestCase):
 
     def test_el_nivel_de_prueba_hace_aparecer_enemigos_con_el_tiempo(self):
         self.assertEqual(self.scene.ecs_world.get_component(CEnemy), [])
+        # BLAST OFF, el VERDE inicial de la alerta (#29) y el initial_delay del spawner.
         # Se cuenta el máximo de enemigos vivos: alguno puede morir contra un obstáculo (LC-OBS-04).
         most_alive = 0
-        for _ in range(round(6 / DT)):
+        for _ in range(round(12 / DT)):
             self.scene.simulate(DT)
             most_alive = max(most_alive, len(self.scene.ecs_world.get_component(CEnemy)))
         self.assertGreater(most_alive, 0)

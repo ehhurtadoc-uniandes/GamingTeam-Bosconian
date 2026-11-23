@@ -16,6 +16,7 @@ from src.create.prefab_explosion import create_explosion_for
 from src.create.prefab_obstacle import create_mine_blast, create_obstacle
 from src.create.prefab_player import create_player
 from src.create.prefab_player_bullet import create_player_bullet
+from src.ecs.components.c_alert import AlertState
 from src.ecs.components.c_animation import CAnimation
 from src.ecs.components.c_enemy import CEnemy, EnemyType
 from src.ecs.components.c_enemy_spawner import CEnemySpawner
@@ -32,6 +33,7 @@ from src.ecs.components.c_velocity import CVelocity
 from src.ecs.components.tags.c_tag_hidden import CTagHidden
 from src.ecs.systems.s_player_death import (is_vulnerable, kill_player, system_player_death,
                                             system_player_invulnerability, system_player_respawn)
+from src.ecs.systems.s_alert import get_alert
 from src.ecs.systems.s_camera import get_camera
 from src.ecs.systems.s_player_fire import system_player_fire
 from src.ecs.systems.s_player_movement import system_player_acceleration
@@ -333,9 +335,10 @@ class TestMuerteEnPlayScene(unittest.TestCase):
         self.scene.simulate(1 / 60)
         self.scene.process_events(key_event(pygame.KEYDOWN, pygame.K_l))
         self.world.component_for_entity(player, CPlayerDead).remaining = 0.0
+        # En VERDE el spawner no funciona (#29).
+        get_alert(self.world).state = AlertState.YELLOW
         for _, c_sp in self.world.get_component(CEnemySpawner):
             c_sp.time_to_spawn = 0.0
-            c_sp.active = True
             c_sp.max_alive = 1000
         before = {e for e, _ in self.world.get_component(CEnemy)}
 

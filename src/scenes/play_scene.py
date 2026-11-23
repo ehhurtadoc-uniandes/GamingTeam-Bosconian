@@ -3,6 +3,7 @@ from enum import Enum
 
 import pygame
 
+from src.create.prefab_alert import create_alert, create_alert_hud, load_alert_hud
 from src.create.prefab_base import create_bases
 from src.create.prefab_camera import create_camera
 from src.create.prefab_enemy import create_enemy
@@ -27,6 +28,8 @@ from src.ecs.components.tags.c_tag_hide_on_pause import CTagHideOnPause
 from src.ecs.components.tags.c_tag_pause_overlay import CTagPauseOverlay
 from src.create.prefab_explosion import create_explosion_for, destroy_with_explosion
 from src.ecs.components.c_enemy import CEnemy, EnemyType
+from src.ecs.systems.s_alert import (alert_allows_launch, alert_rate_multiplier, get_alert, system_alert,
+                                    system_alert_hud, system_alert_speed)
 from src.ecs.systems.s_animation import system_animation
 from src.ecs.systems.s_base_core import system_base_core
 from src.ecs.systems.s_base_destruction import system_player_bullet_base
@@ -144,6 +147,7 @@ class PlayScene(Scene):
         self._has_special_shot = False
         self._respawn_info: dict = {}
         self._player_spawn_pos = pygame.Vector2(0, 0)
+        self._alert_hud_info: dict = {}
         self._clear_time = 0.0
         # Escena pedida en el último switch_scene: al volver a crear la escena de juego (paso de
         # ronda o trampa N) se conservan las direcciones presionadas; viniendo de otra escena, no.
@@ -192,6 +196,7 @@ class PlayScene(Scene):
         create_score_hud(self.ecs_world, score_info["hud"])
         create_lives_hud(self.ecs_world, score_info["lives"]["hud"])
         create_minimap(self.ecs_world, ServiceLocator.configs_service.get(constants.minimap_config))
+        create_alert_hud(self.ecs_world, self._alert_hud_info)
         self._levels_info = ServiceLocator.configs_service.get(constants.levels_config)
         # La ronda se muestra desde 1; level_index empieza en 0.
         create_round_hud(self.ecs_world, self._levels_info["round_hud"], self.level_index + 1)
@@ -237,6 +242,11 @@ class PlayScene(Scene):
             create_enemy_spawner(self.ecs_world, level_info)
         except (KeyError, ValueError) as error:
             raise ValueError(f"{level_path}: {error}") from error
+        # La alerta empieza en VERDE con el tiempo en cero cada vez que se crea el nivel (#29).
+        # Sus errores ya nombran el archivo: alerts.json o el bloque "alert" del nivel.
+        alerts_info = ServiceLocator.configs_service.get(constants.alerts_config)
+        self._alert_hud_info = load_alert_hud(alerts_info, constants.alerts_config)
+        create_alert(self.ecs_world, alerts_info, constants.alerts_config, level_info, level_path)
         # Los obstáculos no aparecen encima de las bases ni del jugador. Las bases cuentan por su cuerpo.
         bases_areas = [(self._center_of(base),
                         pygame.Vector2(self.ecs_world.component_for_entity(base, CSurface).area.size))
@@ -277,11 +287,18 @@ class PlayScene(Scene):
         # La cámara ya está centrada en el jugador, salvo que acabe de reaparecer en el inicio:
         # se centra antes del spawner para que los enemigos nuevos no salgan dentro de la pantalla.
         system_camera(self.ecs_world, player_pos + pygame.Vector2(player_size) / 2)
+        # La alerta va antes del spawner y de los núcleos: sus cambios ya rigen en este paso.
+        # Una base destruida en el paso anterior la pone aquí en VERDE.
+        system_alert(self.ecs_world, delta_time)
         # Los enemigos nuevos salen fuera de lo que ve la cámara (centrada en el jugador antes de moverse).
         system_enemy_spawner(self.ecs_world, delta_time, get_camera(self.ecs_world),
                              self._enemies_info, self._spawn_margin)
         # Los núcleos lanzan sus E antes del estado, para que el E nuevo apunte (AIM) en este paso.
-        system_base_core(self.ecs_world, delta_time, self._enemies_info)
+        alert = get_alert(self.ecs_world)
+        system_base_core(self.ecs_world, delta_time, self._enemies_info,
+                         alert_allows_launch(alert), alert_rate_multiplier(alert))
+        # En ROJA, los enemigos vivos y los recién creados van más rápido antes de decidir su estado.
+        system_alert_speed(self.ecs_world)
         system_enemy_state(self.ecs_world, delta_time, player_pos, self.world_size)
         system_steering(self.ecs_world, delta_time, player_pos, self.world_size)
         # Las torretas disparan antes del movimiento para que la bala nueva avance en este frame.
@@ -320,6 +337,7 @@ class PlayScene(Scene):
         # Al final, para que el HUD muestre los puntos sumados en este paso.
         system_score_hud(self.ecs_world)
         system_lives_hud(self.ecs_world)
+        system_alert_hud(self.ecs_world)
         system_minimap(self.ecs_world, delta_time, self.world_size)
         # Si el jugador murió sin vidas, la partida terminó aunque haya caído la última base
         # (p. ej. con una bala que seguía en vuelo): se va a la derrota, no a la siguiente ronda.
@@ -445,6 +463,7 @@ class PlayScene(Scene):
         system_star_blink(self.ecs_world, delta_time, self._stars_info["blink"])
         system_score_hud(self.ecs_world)
         system_lives_hud(self.ecs_world)
+        system_alert_hud(self.ecs_world)
         system_minimap(self.ecs_world, delta_time, self.world_size)
         self._blast_off_time -= delta_time
         if self._blast_off_time <= 0:

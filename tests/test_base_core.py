@@ -14,6 +14,7 @@ import pygame
 
 from src.create.prefab_base import create_base, create_bases, parse_core_mode
 from src.create.prefab_enemy_spawner import create_enemy_spawner
+from src.ecs.components.c_alert import AlertState
 from src.ecs.components.c_base import BaseOrientation, CBase
 from src.ecs.components.c_base_core import CBaseCore, CoreMode, CoreState
 from src.ecs.components.c_camera import CCamera
@@ -26,6 +27,7 @@ from src.ecs.components.c_surface import CSurface
 from src.ecs.components.c_transform import CTransform
 from src.ecs.components.c_velocity import CVelocity
 from src.create.prefab_enemy import create_enemy
+from src.ecs.systems.s_alert import get_alert
 from src.ecs.systems.s_base_core import system_base_core
 from src.ecs.systems.s_enemy_bounce import system_enemy_bounce
 from src.ecs.systems.s_enemy_spawner import system_enemy_spawner
@@ -421,9 +423,11 @@ class TestNucleoEnPlayScene(unittest.TestCase):
         world, cores = self.start_level(index)
         self.assertTrue(cores)
         self.assertTrue(all(c.state == CoreState.CLOSED for c in cores))
-        # El spawner se apaga para contar solo los E de los núcleos.
-        for _, spawner in world.get_component(CEnemySpawner):
-            spawner.active = False
+        # Se quita el spawner para contar solo los E de los núcleos, y la alerta pasa a AMARILLA
+        # (en VERDE los núcleos no lanzan, #29).
+        for spawner, _ in world.get_component(CEnemySpawner):
+            world.delete_entity(spawner, immediate=True)
+        get_alert(world).state = AlertState.YELLOW
         durations = cores[0].durations
         steps = int((durations[CoreState.CLOSED] + durations[CoreState.OPENING]) * 60) + 2
         for _ in range(steps):
@@ -436,8 +440,9 @@ class TestNucleoEnPlayScene(unittest.TestCase):
         index = next(i for i in (0, 1) if parse_core_mode(self.level_info(i)) == CoreMode.STATIC)
         world, cores = self.start_level(index)
         self.assertTrue(all(c.state == CoreState.OPEN for c in cores))
-        for _, spawner in world.get_component(CEnemySpawner):
-            spawner.active = False
+        for spawner, _ in world.get_component(CEnemySpawner):
+            world.delete_entity(spawner, immediate=True)
+        get_alert(world).state = AlertState.YELLOW
         for _ in range(300):
             self.scene.simulate(1 / 60)
         self.assertEqual(world.get_component(CEnemy), [])
