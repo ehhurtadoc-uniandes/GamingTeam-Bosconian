@@ -1,6 +1,6 @@
 {
   "core": { "mode": "static" },
-  "special": true,
+  "special": false,
   "player_start": { "x": 512, "y": 768 },
   "bases": [
     { "pos": { "x": 256, "y": 384 }, "orientation": "horizontal" },

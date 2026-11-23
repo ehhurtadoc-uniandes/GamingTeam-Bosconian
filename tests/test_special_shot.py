@@ -192,10 +192,16 @@ class TestHabilidadEnPlayScene(unittest.TestCase):
         return [e for e, _ in self.scene.ecs_world.get_component(CLifetime)
                 if self.scene.ecs_world.has_component(e, CText)]
 
-    def test_el_nivel_real_da_la_habilidad(self):
-        self.assertTrue(self.level()["special"])
+    def give_special(self):
+        level = self.level()
+        level["special"] = True
+        self.addCleanup(level.__setitem__, "special", False)
+
+    def test_el_primer_nivel_no_da_la_habilidad(self):
+        self.assertFalse(self.level()["special"])
 
     def test_nivel_con_habilidad_dispara_cuatro_balas_y_muestra_el_mensaje(self):
+        self.give_special()
         self.scene.start()
         self.scene.skip_blast_off()
         self.assertEqual(len(self.messages()), 1)
@@ -205,7 +211,6 @@ class TestHabilidadEnPlayScene(unittest.TestCase):
     def test_nivel_sin_habilidad_dispara_dos_balas_y_no_muestra_mensaje(self):
         level = self.level()
         level["special"] = False
-        self.addCleanup(level.__setitem__, "special", True)
         self.scene.start()
         self.scene.skip_blast_off()
         self.assertEqual(self.messages(), [])
@@ -215,13 +220,14 @@ class TestHabilidadEnPlayScene(unittest.TestCase):
     def test_nivel_sin_la_clave_special_no_da_la_habilidad(self):
         level = self.level()
         del level["special"]
-        self.addCleanup(level.__setitem__, "special", True)
+        self.addCleanup(level.__setitem__, "special", False)
         self.scene.start()
         self.scene.skip_blast_off()
         self.assertEqual(self.messages(), [])
         self.assertIsNone(self.scene.ecs_world.try_component(self.scene._player_entity, CSpecialShot))
 
     def test_el_mensaje_se_borra_con_el_tiempo_y_se_dibuja(self):
+        self.give_special()
         self.scene.start()
         self.scene.skip_blast_off()
         self.scene.do_draw(self.engine.screen)
@@ -231,6 +237,7 @@ class TestHabilidadEnPlayScene(unittest.TestCase):
         self.assertEqual(self.messages(), [])
 
     def test_en_pausa_el_mensaje_no_corre(self):
+        self.give_special()
         self.scene.start()
         self.scene.skip_blast_off()
         self.scene.toggle_pause()
