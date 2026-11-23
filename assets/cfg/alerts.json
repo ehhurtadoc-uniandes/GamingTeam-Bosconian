@@ -12,8 +12,7 @@
   "hud": {
     "label": {
       "text": "CONDITION",
-      "font_size": 7,
-      "anchor": { "x": 224, "y": 40 },
+      "anchor": { "x": 220, "y": 40 },
       "alignment": "CENTER",
       "color": { "r": 255, "g": 60, "b": 60 }
     },

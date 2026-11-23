@@ -25,11 +25,8 @@ from src.ecs.components.c_lifetime import CLifetime
 from src.ecs.components.c_menu_item import CMenuItem
 from src.ecs.components.c_player_dead import CPlayerDead
 from src.ecs.components.c_special_shot import CSpecialShot
-from src.ecs.components.tags.c_tag_hidden import CTagHidden
-from src.ecs.components.tags.c_tag_hidden_by_info import CTagHiddenByInfo
 from src.ecs.components.tags.c_tag_hide_on_pause import CTagHideOnPause
 from src.ecs.components.tags.c_tag_pause_overlay import CTagPauseOverlay
-from src.ecs.components.tags.c_tag_ui import CTagUI
 from src.create.prefab_explosion import create_explosion_for, destroy_with_explosion
 from src.ecs.components.c_enemy import CEnemy, EnemyType
 from src.ecs.systems.s_alert import (alert_allows_launch, alert_rate_multiplier, get_alert, system_alert,
@@ -607,7 +604,6 @@ class PlayScene(Scene):
     def _show_pause_menu(self, selected: int) -> None:
         """Muestra "JUEGO PAUSADO" y el menú de pausa, con el mismo estilo de menú que el título."""
         self._clear_pause_overlay()
-        self._show_hud()
         self.state = PlayState.PAUSED
         text_info = self._pause_info["text"]
         overlay = [create_interface_text(self.ecs_world, text_info["text"], text_info),
@@ -626,20 +622,6 @@ class PlayScene(Scene):
         overlay = create_text_lines(self.ecs_world, config["lines"])
         overlay.append(create_interface_text(self.ecs_world, hint_info["text"], hint_info))
         self._tag_pause_overlay(overlay)
-        self._hide_hud()
-
-    def _hide_hud(self) -> None:
-        """Esconde el HUD (puntaje, condición, vidas...) para que no se monte sobre las instrucciones."""
-        for entity, _ in self.ecs_world.get_component(CTagUI):
-            if not self.ecs_world.has_component(entity, CTagPauseOverlay) and \
-                    not self.ecs_world.has_component(entity, CTagHidden):
-                self.ecs_world.add_component(entity, CTagHidden())
-                self.ecs_world.add_component(entity, CTagHiddenByInfo())
-
-    def _show_hud(self) -> None:
-        for entity, _ in self.ecs_world.get_component(CTagHiddenByInfo):
-            self.ecs_world.remove_component(entity, CTagHiddenByInfo)
-            self.ecs_world.remove_component(entity, CTagHidden)
 
     def _tag_pause_overlay(self, entities: list[int]) -> None:
         for entity in entities:

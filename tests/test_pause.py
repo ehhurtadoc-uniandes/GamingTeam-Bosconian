@@ -230,24 +230,6 @@ class TestPauseMenu(TestPlayScenePause):
         self.assertNotIn("Z: DISPARAR", self.all_texts())
         self.assertEqual(self.scene._pause_selected, 1)
 
-    def hud_hidden(self, text):
-        for entity, c_text in self.world.get_component(CText):
-            if c_text.text == text:
-                return self.world.has_component(entity, CTagHidden)
-
-    def test_el_hud_se_esconde_en_las_instrucciones_y_vuelve(self):
-        self.press(pygame.K_p)
-        self.assertFalse(self.hud_hidden("HI-SCORE"))
-        self.press(pygame.K_DOWN)
-        self.press(pygame.K_z)
-        self.assertTrue(self.hud_hidden("HI-SCORE"))
-        self.assertTrue(self.hud_hidden("CONDITION"))
-        self.press(pygame.K_ESCAPE)
-        self.assertFalse(self.hud_hidden("HI-SCORE"))
-        self.press(pygame.K_ESCAPE)
-        self.assertEqual(self.scene.state, PlayState.PLAYING)
-        self.assertFalse(self.hud_hidden("CONDITION"))
-
     def test_creditos_en_pausa(self):
         self.press(pygame.K_p)
         self.press(pygame.K_DOWN)
