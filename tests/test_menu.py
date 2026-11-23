@@ -116,6 +116,17 @@ class TestTitleScene(unittest.TestCase):
         self.assertEqual(len(found), 1)
         self.assertEqual(found[0].x + logo.get_width() / 2, 128)
 
+    def test_star_destroyer_parpadea(self):
+        tagline = [c_s for _, (c_s, c_text) in self.scene.ecs_world.get_components(CSurface, CText)
+                   if c_text.text == "STAR DESTROYER"][0]
+        self.assertNotEqual(tagline.surf.get_alpha(), 0)
+        for _ in range(31):
+            self.scene.simulate(DT)
+        self.assertEqual(tagline.surf.get_alpha(), 0)
+        for _ in range(30):
+            self.scene.simulate(DT)
+        self.assertNotEqual(tagline.surf.get_alpha(), 0)
+
     def test_aceptar_en_jugar_reinicia_la_partida_y_va_al_juego(self):
         ServiceLocator.game_state_service.add_score(500)
         self.press(pygame.K_z)
