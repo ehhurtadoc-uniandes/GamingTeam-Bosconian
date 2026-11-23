@@ -4,7 +4,7 @@ from src.create.prefab_menu import create_menu
 from src.create.prefab_text import create_interface_text
 from src.ecs.components.c_input_command import CInputCommand, CommandPhase
 from src.ecs.components.c_text import CText
-from src.ecs.systems.s_menu import get_menu, move_selection, selected_action, system_menu_highlight
+from src.ecs.systems.s_menu import move_menu_selection, selected_action, system_menu_highlight
 from src.engine.service_locator import ServiceLocator
 from src.scenes.menu_scene import MenuScene
 
@@ -60,9 +60,8 @@ class DefeatScene(MenuScene):
         if action.phase != CommandPhase.START or self._resolved:
             return
         constants = ServiceLocator.constants_service
-        menu = get_menu(self.ecs_world)
         if action.name in constants.menu_move_commands:
-            menu.selected = move_selection(menu.selected, constants.menu_move_commands[action.name], menu.count)
+            move_menu_selection(self.ecs_world, constants.menu_move_commands[action.name])
         elif self._time_in_scene < self._config["input_delay"]:
             return
         elif action.name == constants.menu_accept_command:
@@ -73,6 +72,7 @@ class DefeatScene(MenuScene):
     def accept(self, action: str) -> None:
         if self._resolved:
             return
+        ServiceLocator.sounds_service.play_effect("MENU_ACCEPT")
         if action == "CONTINUE":
             ServiceLocator.game_state_service.continue_game()
             self._resolve(ServiceLocator.constants_service.play_scene)

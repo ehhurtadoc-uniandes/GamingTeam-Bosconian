@@ -48,6 +48,7 @@ def destroy_base(world: esper.World, base: int, points_info: dict) -> int:
             destroy_with_explosion(world, piece)
     c_base.turrets.clear()
     destroy_with_explosion(world, base)
+    ServiceLocator.sounds_service.play_effect("BASE_DESTROYED")
     return points_info["base"]
 
 

@@ -63,6 +63,10 @@ class GameStateService:
         self.score += points
         self.hi_score = max(self.hi_score, self.score)
         every = self._lives_info["extra_life"]["every"]
+        if self.score >= self.next_extra_life:
+            # Import local: ServiceLocator importa este módulo.
+            from src.engine.service_locator import ServiceLocator
+            ServiceLocator.sounds_service.play_effect("EXTRA_LIFE")
         while self.score >= self.next_extra_life:
             self.lives += 1
             self.next_extra_life = next_extra_life_after(self.next_extra_life, every)

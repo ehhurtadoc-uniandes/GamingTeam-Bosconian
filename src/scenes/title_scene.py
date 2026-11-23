@@ -1,6 +1,6 @@
 from src.create.prefab_menu import create_menu, update_menu_values
 from src.ecs.components.c_input_command import CInputCommand, CommandPhase
-from src.ecs.systems.s_menu import get_menu, move_selection, selected_action, system_menu_highlight
+from src.ecs.systems.s_menu import move_menu_selection, move_selection, selected_action, system_menu_highlight
 from src.engine.service_locator import ServiceLocator
 from src.scenes.menu_scene import MenuScene
 
@@ -32,9 +32,8 @@ class TitleScene(MenuScene):
         if action.phase != CommandPhase.START:
             return
         constants = ServiceLocator.constants_service
-        menu = get_menu(self.ecs_world)
         if action.name in constants.menu_move_commands:
-            menu.selected = move_selection(menu.selected, constants.menu_move_commands[action.name], menu.count)
+            move_menu_selection(self.ecs_world, constants.menu_move_commands[action.name])
         elif action.name in constants.menu_change_commands:
             if selected_action(self.ecs_world) == "LEVEL":
                 self.change_level(constants.menu_change_commands[action.name])
@@ -45,10 +44,12 @@ class TitleScene(MenuScene):
         """Elige la ronda anterior o la siguiente; de la última pasa a la primera (LC-ESC-02.1)."""
         game_state = ServiceLocator.game_state_service
         game_state.level_index = move_selection(game_state.level_index, step, self._level_count)
+        ServiceLocator.sounds_service.play_effect("MENU_MOVE")
         update_menu_values(self.ecs_world, self._menu_values())
 
     def accept(self, action: str) -> None:
         """Ejecuta la opción elegida. En la ronda, aceptar también empieza a jugar."""
+        ServiceLocator.sounds_service.play_effect("MENU_ACCEPT")
         if action in ("PLAY", "LEVEL"):
             ServiceLocator.game_state_service.new_game()
             self.switch_scene("play")

@@ -30,6 +30,7 @@ class ConstantsService:
         self.blast_off_config = "assets/cfg/blast_off.json"
         self.cheats_config = "assets/cfg/cheats.json"
         self.victory_config = "assets/cfg/victory.json"
+        self.sounds_config = "assets/cfg/sounds.json"
         self.pause_config = "assets/cfg/pause.json"
         self.explosions_config = "assets/cfg/explosions.json"
         self.defeat_config = "assets/cfg/defeat.json"

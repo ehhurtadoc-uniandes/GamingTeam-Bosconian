@@ -1,0 +1,32 @@
+{
+  "mixer": {
+    "frequency": 22050,
+    "buffer": 512,
+    "channels": 16
+  },
+  "effects_volume": 0.6,
+  "music_volume": 0.45,
+  "effects": {
+    "PLAYER_FIRE": "assets/snd/player_fire.ogg",
+    "EXPLOSION": "assets/snd/explosion.ogg",
+    "PLAYER_EXPLOSION": "assets/snd/player_explosion.ogg",
+    "BASE_DESTROYED": "assets/snd/base_destroyed.ogg",
+    "EXTRA_LIFE": "assets/snd/extra_life.ogg",
+    "MENU_MOVE": "assets/snd/menu_move.ogg",
+    "MENU_ACCEPT": "assets/snd/menu_accept.ogg",
+    "PAUSE": "assets/snd/pause.ogg",
+    "LEVEL_CLEAR": "assets/snd/level_clear.ogg",
+    "ALERT_GREEN": "assets/snd/alert_green.ogg",
+    "ALERT_YELLOW": "assets/snd/alert_yellow.ogg",
+    "ALERT_RED": "assets/snd/alert_red.ogg"
+  },
+  "music": {
+    "TITLE": "assets/music/title.ogg",
+    "PLAY_1": "assets/music/play_1.ogg",
+    "PLAY_2": "assets/music/play_2.ogg",
+    "PLAY_3": "assets/music/play_3.ogg",
+    "VICTORY": "assets/music/victory.ogg",
+    "DEFEAT": "assets/music/defeat.ogg"
+  },
+  "level_music": ["PLAY_1", "PLAY_2", "PLAY_3"]
+}

@@ -20,6 +20,9 @@ class MenuScene(Scene):
 
     def do_create(self) -> None:
         self._config = ServiceLocator.configs_service.get(self._config_path)
+        # Música de la escena (#38). Título, instrucciones y créditos comparten pista: no se corta al pasar.
+        if "music" in self._config:
+            ServiceLocator.sounds_service.play_music(self._config["music"])
         self._stars_info = ServiceLocator.configs_service.get(ServiceLocator.constants_service.stars_config)
         create_starfield(self.ecs_world, self._stars_info, self.screen_rect)
         for key in ("title", "subtitle", "hint"):

@@ -9,6 +9,7 @@ from src.ecs.components.c_special_shot import CSpecialShot
 from src.ecs.components.c_surface import CSurface
 from src.ecs.components.c_transform import CTransform
 from src.ecs.components.tags.c_tag_player import CTagPlayer
+from src.engine.service_locator import ServiceLocator
 
 
 def fan_directions(direction: pygame.Vector2, count: int, spread_degrees: float) -> list[pygame.Vector2]:
@@ -38,3 +39,4 @@ def system_player_fire(world: esper.World) -> None:
             create_player_bullet(world, c_w.bullet_info, center, direction)
         create_player_bullet(world, c_w.bullet_info, center, -c_pm.direction)
         c_w.time_left = c_w.fire_cooldown
+        ServiceLocator.sounds_service.play_effect("PLAYER_FIRE")

@@ -18,7 +18,15 @@ class GameEngine:
     def __init__(self) -> None:
         constants = ServiceLocator.constants_service
         window = ServiceLocator.configs_service.get(constants.window_config)
+        sounds_info = ServiceLocator.configs_service.get(constants.sounds_config)
+        mixer_info = sounds_info["mixer"]
+        # Buffer pequeño para que el disparo suene en el mismo frame en que se presiona la tecla.
+        pygame.mixer.pre_init(mixer_info["frequency"], -16, 2, mixer_info["buffer"])
         pygame.init()
+        if pygame.mixer.get_init() is not None:
+            # Más canales que los 8 por omisión: varias explosiones y disparos se superponen.
+            pygame.mixer.set_num_channels(mixer_info["channels"])
+        ServiceLocator.sounds_service.load(sounds_info)
         ServiceLocator.gamepad_service.open_connected()
         size = window["size"]
         # En web (pygbag) SCALED falla con "failed to create renderer"; ahí el navegador escala el canvas.
