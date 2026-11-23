@@ -1,0 +1,60 @@
+{
+  "accept_delay": 1.0,
+  "title": {
+    "text": "MISION CUMPLIDA",
+    "anchor": {
+      "x": 128,
+      "y": 48
+    },
+    "alignment": "CENTER",
+    "color": {
+      "r": 255,
+      "g": 230,
+      "b": 80
+    }
+  },
+  "subtitle": {
+    "text": "COMPLETASTE TODAS LAS RONDAS",
+    "anchor": {
+      "x": 128,
+      "y": 64
+    },
+    "alignment": "CENTER",
+    "color": {
+      "r": 255,
+      "g": 255,
+      "b": 255
+    }
+  },
+  "stats": {
+    "anchor": {
+      "x": 128,
+      "y": 100
+    },
+    "line_height": 16,
+    "alignment": "CENTER",
+    "color": {
+      "r": 255,
+      "g": 255,
+      "b": 255
+    },
+    "text": [
+      "PUNTAJE: {score}",
+      "VIDAS USADAS: {lives_lost}",
+      "CONTINUACIONES: {continues_used}"
+    ]
+  },
+  "hint": {
+    "text": "Z: VOLVER AL TITULO",
+    "anchor": {
+      "x": 128,
+      "y": 188
+    },
+    "alignment": "CENTER",
+    "color": {
+      "r": 120,
+      "g": 120,
+      "b": 120
+    }
+  }
+}

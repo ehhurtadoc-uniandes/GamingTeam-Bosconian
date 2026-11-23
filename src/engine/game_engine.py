@@ -9,6 +9,7 @@ from src.scenes.defeat_scene import DefeatScene
 from src.scenes.play_scene import PlayScene
 from src.scenes.text_scene import TextScene
 from src.scenes.title_scene import TitleScene
+from src.scenes.victory_scene import VictoryScene
 
 
 class GameEngine:
@@ -39,6 +40,7 @@ class GameEngine:
             "credits": TextScene(self, constants.credits_config),
             "play": PlayScene(self),
             "defeat": DefeatScene(self),
+            "victory": VictoryScene(self),
         }
         self._current_scene: Scene | None = None
         self._scene_name_to_switch: str | None = None
