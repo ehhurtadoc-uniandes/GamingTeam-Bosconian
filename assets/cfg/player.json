@@ -13,9 +13,11 @@
   "weapon": {
     "fire_cooldown": 0.25,
     "bullet": {
+      "image": "assets/img/bullet.png",
       "size": { "w": 3, "h": 3 },
       "color": { "r": 255, "g": 255, "b": 255 },
-      "speed": 80
+      "speed": 200,
+      "hitbox": { "size": { "w": 3, "h": 3 } }
     }
   },
   "special_shot": {
