@@ -14,6 +14,7 @@ from src.ecs.systems.s_minimap import system_minimap, to_minimap
 WORLD = pygame.Vector2(1024, 1536)
 INFO = {"rect": {"x": 192, "y": 80, "w": 64, "h": 96}, "bg_color": {"r": 0, "g": 0, "b": 100},
         "base_color": {"r": 0, "g": 255, "b": 0}, "player_color": {"r": 255, "g": 255, "b": 255},
+        "pickup_color": {"r": 255, "g": 230, "b": 40},
         "dot_size": 2, "player_blink": 0.25}
 
 

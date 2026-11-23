@@ -76,6 +76,7 @@ class ConstantsService:
         # Comando que pausa y reanuda la escena de juego (#35).
         self.pause_command = "PAUSE"
         self.fire_command = "PLAYER_FIRE"
+        self.ability_command = "PLAYER_SPECIAL"
         self.debug_hitboxes_command = "DEBUG_HITBOXES"
         self.debug_explode_command = "DEBUG_EXPLODE"
         self.debug_kill_command = "DEBUG_KILL"

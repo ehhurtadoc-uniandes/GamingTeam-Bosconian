@@ -1,5 +1,6 @@
 {
   "special": true,
+  "pickup": { "chance": 1.0, "interval": 6.0 },
   "core": { "mode": "static" },
   "bases": [
     { "pos": { "x": 56, "y": 48 }, "orientation": "horizontal" },

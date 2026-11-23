@@ -15,6 +15,7 @@ class CollisionLayer(Enum):
     BASE_TURRET = "BASE_TURRET"
     BASE_CORE = "BASE_CORE"
     OBSTACLE = "OBSTACLE"
+    PICKUP = "PICKUP"
 
 
 class CHitBox:

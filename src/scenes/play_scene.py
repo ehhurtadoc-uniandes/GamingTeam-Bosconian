@@ -8,10 +8,11 @@ from src.create.prefab_base import create_bases
 from src.create.prefab_camera import create_camera
 from src.create.prefab_enemy import create_enemy
 from src.create.prefab_enemy_spawner import create_enemy_spawner
-from src.create.prefab_hud import create_lives_hud, create_score_hud
+from src.create.prefab_hud import create_ability_hud, create_lives_hud, create_score_hud
 from src.create.prefab_menu import create_menu, create_text_lines
 from src.create.prefab_minimap import create_minimap
 from src.create.prefab_obstacle import create_obstacles
+from src.create.prefab_pickup import create_pickup_spawner
 from src.create.prefab_player import create_player
 from src.create.prefab_round import create_round_hud
 from src.create.prefab_special_message import create_special_shot_message
@@ -54,6 +55,9 @@ from src.ecs.systems.s_pause import system_pause_visibility
 from src.ecs.systems.s_menu import get_menu, move_menu_selection, selected_action, system_menu_highlight
 from src.ecs.systems.s_player_death import (is_vulnerable, kill_player, system_player_death,
                                            system_player_invulnerability, system_player_respawn)
+from src.ecs.systems.s_player_ability import (system_ability_hud, system_pickup_collection,
+                                             system_pickup_spawner, system_player_ability,
+                                             system_player_ability_activate)
 from src.ecs.systems.s_player_bullet_enemy import system_player_bullet_enemy
 from src.ecs.systems.s_player_fire import system_player_fire, system_player_weapon_cooldown
 from src.ecs.systems.s_player_sprite import system_player_sprite
@@ -145,6 +149,7 @@ class PlayScene(Scene):
         self._event_consumed = False
         self._show_hitboxes = False
         self._has_special_shot = False
+        self._ability_info: dict | None = None
         self._respawn_info: dict = {}
         self._player_spawn_pos = pygame.Vector2(0, 0)
         self._alert_hud_info: dict = {}
@@ -178,6 +183,7 @@ class PlayScene(Scene):
         self._create_level()
         player_info = ServiceLocator.configs_service.get(constants.player_config)
         self._respawn_info = player_info["respawn"]
+        self._ability_info = player_info.get("ability")
         size = player_info["size"]
         pos = self._player_start - pygame.Vector2(size["w"], size["h"]) / 2
         self._player_spawn_pos = pygame.Vector2(pos)
@@ -197,6 +203,8 @@ class PlayScene(Scene):
         score_info = ServiceLocator.configs_service.get(constants.score_config)
         create_score_hud(self.ecs_world, score_info["hud"])
         create_lives_hud(self.ecs_world, score_info["lives"]["hud"])
+        if self._ability_info is not None:
+            create_ability_hud(self.ecs_world, self._ability_info["hud"])
         create_minimap(self.ecs_world, ServiceLocator.configs_service.get(constants.minimap_config))
         create_alert_hud(self.ecs_world, self._alert_hud_info)
         self._levels_info = ServiceLocator.configs_service.get(constants.levels_config)
@@ -242,6 +250,7 @@ class PlayScene(Scene):
         try:
             bases = create_bases(self.ecs_world, base_info, level_info)
             create_enemy_spawner(self.ecs_world, level_info)
+            create_pickup_spawner(self.ecs_world, level_info)
         except (KeyError, ValueError) as error:
             raise ValueError(f"{level_path}: {error}") from error
         # La alerta empieza en VERDE con el tiempo en cero cada vez que se crea el nivel (#29).
@@ -311,6 +320,8 @@ class PlayScene(Scene):
         system_obstacle_bounce(self.ecs_world, self.world_size)
         # Justo después de mover: lo que salió por un borde vuelve por el opuesto.
         system_wraparound(self.ecs_world, self.world_size)
+        if self._ability_info is not None:
+            system_player_ability(self.ecs_world, delta_time, self._ability_info)
         # La cámara sigue al jugador ya movido, para que no se vea un frame atrasada.
         # player_pos ya cambió con el movimiento: se recalcula el centro para la cámara y las explosiones.
         player_center = player_pos + pygame.Vector2(player_size) / 2
@@ -328,6 +339,10 @@ class PlayScene(Scene):
         system_player_bullet_enemy(self.ecs_world, self.world_size)
         # Después de los obstáculos y los enemigos: una bala que ya se gastó en uno no daña la base.
         system_player_bullet_base(self.ecs_world, self._base_points, self.world_size)
+        if self._ability_info is not None:
+            system_pickup_spawner(self.ecs_world, delta_time, self._ability_info["pickup"], self.world_size,
+                                  player_center)
+            system_pickup_collection(self.ecs_world, self.world_size)
         system_animation(self.ecs_world, delta_time)
         # Después de la animación, para que la explosión se borre justo al terminar.
         # Devuelve True si la explosión alcanzó al jugador: su muerte la maneja el área del jugador.
@@ -339,6 +354,8 @@ class PlayScene(Scene):
         # Al final, para que el HUD muestre los puntos sumados en este paso.
         system_score_hud(self.ecs_world)
         system_lives_hud(self.ecs_world)
+        if self._ability_info is not None:
+            system_ability_hud(self.ecs_world, self._ability_info["hud"])
         system_alert_hud(self.ecs_world)
         system_minimap(self.ecs_world, delta_time, self.world_size)
         # Si el jugador murió sin vidas, la partida terminó aunque haya caído la última base
@@ -427,6 +444,9 @@ class PlayScene(Scene):
         elif action.name == constants.fire_command:
             if action.phase == CommandPhase.START:
                 system_player_fire(self.ecs_world)
+        elif action.name == constants.ability_command:
+            if action.phase == CommandPhase.START and self._ability_info is not None:
+                system_player_ability_activate(self.ecs_world, self._ability_info)
         elif action.name == constants.debug_hitboxes_command:
             if action.phase == CommandPhase.START and self._debug_info["enabled"]:
                 self._show_hitboxes = not self._show_hitboxes
@@ -466,6 +486,8 @@ class PlayScene(Scene):
         system_star_blink(self.ecs_world, delta_time, self._stars_info["blink"])
         system_score_hud(self.ecs_world)
         system_lives_hud(self.ecs_world)
+        if self._ability_info is not None:
+            system_ability_hud(self.ecs_world, self._ability_info["hud"])
         system_alert_hud(self.ecs_world)
         system_minimap(self.ecs_world, delta_time, self.world_size)
         self._blast_off_time -= delta_time
