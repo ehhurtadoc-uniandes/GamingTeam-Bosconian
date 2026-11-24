@@ -62,7 +62,7 @@ class TestDebugEnemies(unittest.TestCase):
         camera = get_camera(self.scene.ecs_world)
         rel = pos - view_top_left(camera)
         rect = camera.viewport
-        self.assertTrue(rel.x in (0, rect.width - 8) or rel.y in (0, rect.height - 8))
+        self.assertTrue(rel.x in (0, rect.width - 20) or rel.y in (0, rect.height - 20))
         self.scene.simulate(1 / 60)
         self.scene.simulate(1 / 60)
         self.assertNotEqual(self.scene.ecs_world.component_for_entity(entity, CTransform).pos, pos)

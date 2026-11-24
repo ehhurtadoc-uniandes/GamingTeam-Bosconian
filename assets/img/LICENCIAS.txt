@@ -1,5 +1,5 @@
 Imágenes recortadas de naves.png (recursos del proyecto final, MISW4407).
 Creadas por Diana Pacheco. Licencia: CC-BY-4.0 (https://creativecommons.org/licenses/by/4.0/)
-Archivos: rock_1..3.png, solid_rock_1..3.png, mine.png, mine_blast.png
+Archivos: rock_1..3.png, solid_rock_1..3.png, mine.png, mine_blast.png, enemy_i.png, enemy_p.png, enemy_e.png, turret_closed.png, turret_open.png, core_open.png, core_opening.png, core_closing.png, core_closed.png, base_body.png, turret_bullet.png, explosion.png (generados con tools/extract_sprites.py)
 Archivos: shield.png, shield_item.png. Dibujados por el equipo para el proyecto (escudo del jugador y su ítem).
 Archivo: title_logo.png. Es titulo.png de los recursos del proyecto final, con el fondo quitado. Creado por Diana Pacheco. Licencia: CC-BY-4.0.

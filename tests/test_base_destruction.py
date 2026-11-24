@@ -155,7 +155,7 @@ class TestTorretas(BaseTestCase):
         for turret in turrets[:5]:
             self.shoot_turret(turret)
         system_turret(self.world, 0.01, pygame.Vector2(CENTER), BASE_INFO["bullet"], WORLD)
-        shooters = {self.world.component_for_entity(b, CTransform).pos.distance_to(self.center(turrets[5])) < 3
+        shooters = {self.world.component_for_entity(b, CTransform).pos.distance_to(self.center(turrets[5])) < 5
                     for b, _ in self.world.get_component(CTagEnemyBullet)}
         self.assertEqual(len(self.world.get_component(CTagEnemyBullet)), 1)
         self.assertEqual(shooters, {True})
@@ -416,8 +416,8 @@ class TestBordesDelMundo(BaseTestCase):
 
     def test_base_partida_por_una_esquina(self):
         base = self.base(H, pygame.Vector2(0, 0))
-        turret = next(t for t in self.parts(base).turrets if self.center(t) == pygame.Vector2(-17, -10))
-        bullet = self.bullet(pygame.Vector2(WORLD.x - 17, WORLD.y - 10), (0, 1))
+        turret = next(t for t in self.parts(base).turrets if self.center(t) == pygame.Vector2(-24, -12))
+        bullet = self.bullet(pygame.Vector2(WORLD.x - 24, WORLD.y - 12), (0, 1))
         self.step()
         self.assertFalse(self.alive(bullet))
         self.assertFalse(self.alive(turret))

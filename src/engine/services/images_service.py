@@ -10,7 +10,8 @@ class ImagesService:
     def get(self, path: str) -> pygame.Surface:
         """Devuelve la imagen de path, cargándola solo la primera vez."""
         if path not in self._images:
-            self._images[path] = pygame.image.load(path).convert_alpha()
+            image = pygame.image.load(path)
+            self._images[path] = image.convert_alpha() if pygame.display.get_surface() else image
         return self._images[path]
 
     def get_or_create(self, key: str, create: Callable[[], pygame.Surface]) -> pygame.Surface:

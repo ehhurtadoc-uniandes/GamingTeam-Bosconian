@@ -3,6 +3,7 @@ import esper
 import pygame
 
 from src.create.prefab_hitbox import add_hitbox
+from src.create.prefab_player_bullet import bullet_angle, get_bullet_image
 from src.ecs.components.c_hitbox import CollisionLayer
 from src.ecs.components.c_lifetime import CLifetime
 from src.ecs.components.c_surface import CSurface
@@ -22,7 +23,8 @@ def create_turret_bullet(world: esper.World, bullet_info: dict, center: pygame.V
     normalizada, pero no puede ser cero.
     """
     if "image" in bullet_info:
-        surface = CSurface.from_surface(ServiceLocator.images_service.get(bullet_info["image"]))
+        surface = CSurface.from_surface(get_bullet_image(bullet_info["image"],
+                                                         bullet_angle(pygame.Vector2(direction).normalize())))
     else:
         size = bullet_info["size"]
         color = bullet_info["color"]
