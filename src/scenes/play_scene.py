@@ -289,7 +289,7 @@ class PlayScene(Scene):
         constants = ServiceLocator.constants_service
         # Al principio: si reaparece en el inicio, los enemigos ya lo persiguen ahí en este paso.
         if system_player_respawn(self.ecs_world, delta_time, self._respawn_info, self._player_spawn_pos):
-            self.switch_scene(constants.defeat_scene)
+            self.switch_scene(ServiceLocator.game_state_service.route_end(constants.defeat_scene, constants.record_scene))
         system_player_acceleration(self.ecs_world, delta_time)
         system_player_weapon_cooldown(self.ecs_world, delta_time)
         system_player_sprite(self.ecs_world)
@@ -397,7 +397,7 @@ class PlayScene(Scene):
             self.switch_scene(constants.play_scene)
         else:
             game_state.reset_round()
-            self.switch_scene(constants.victory_scene)
+            self.switch_scene(game_state.route_end(constants.victory_scene, constants.record_scene))
 
     def do_draw(self, screen: pygame.Surface) -> None:
         super().do_draw(screen)
