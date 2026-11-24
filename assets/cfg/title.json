@@ -1,5 +1,6 @@
 {
   "music": "TITLE",
+  "attract_after": 15.0,
   "tagline": {
     "text": "STAR DESTROYER",
         "anchor": {

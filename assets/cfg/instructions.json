@@ -1,5 +1,6 @@
 {
   "music": "TITLE",
+  "attract_time": 10.0,
   "title": {
     "text": "INSTRUCCIONES",
     "anchor": {

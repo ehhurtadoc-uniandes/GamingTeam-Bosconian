@@ -6,6 +6,7 @@ import pygame
 from src.engine.scenes.scene import Scene
 from src.engine.service_locator import ServiceLocator
 from src.scenes.defeat_scene import DefeatScene
+from src.scenes.demo_scene import DemoScene
 from src.scenes.play_scene import PlayScene
 from src.scenes.record_scene import RecordScene
 from src.scenes.text_scene import TextScene
@@ -50,6 +51,7 @@ class GameEngine:
             "play": PlayScene(self),
             "defeat": DefeatScene(self),
             "victory": VictoryScene(self),
+            "demo": DemoScene(self),
             "record": RecordScene(self),
         }
         self._current_scene: Scene | None = None

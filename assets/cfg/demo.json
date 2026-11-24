@@ -1,0 +1,145 @@
+{
+  "music": "TITLE",
+  "duration": 12.0,
+  "title": {
+    "text": "DEMO",
+    "anchor": {
+      "x": 128,
+      "y": 16
+    },
+    "alignment": "CENTER",
+    "color": {
+      "r": 255,
+      "g": 60,
+      "b": 60
+    },
+    "blink": 0.5
+  },
+  "hint": {
+    "text": "CUALQUIER TECLA: VOLVER",
+    "anchor": {
+      "x": 128,
+      "y": 188
+    },
+    "alignment": "CENTER",
+    "color": {
+      "r": 120,
+      "g": 120,
+      "b": 120
+    }
+  },
+  "player": {
+    "image": "assets/img/player.png",
+    "center": {
+      "x": 128,
+      "y": 150
+    },
+    "fire_interval": 0.4
+  },
+  "bullet": {
+    "image": "assets/img/bullet.png",
+    "speed": 200,
+    "lifetime": 1.5
+  },
+  "targets": [
+    {
+      "image": "assets/img/enemy_i.png",
+      "pos": {
+        "x": 128,
+        "y": -10
+      },
+      "velocity": {
+        "x": 0,
+        "y": 30
+      }
+    },
+    {
+      "image": "assets/img/enemy_p.png",
+      "pos": {
+        "x": 20,
+        "y": 20
+      },
+      "velocity": {
+        "x": 45,
+        "y": 12
+      }
+    },
+    {
+      "image": "assets/img/enemy_e.png",
+      "pos": {
+        "x": 236,
+        "y": 40
+      },
+      "velocity": {
+        "x": -45,
+        "y": 10
+      }
+    },
+    {
+      "image": "assets/img/enemy_i.png",
+      "pos": {
+        "x": 128,
+        "y": -60
+      },
+      "velocity": {
+        "x": 0,
+        "y": 30
+      }
+    },
+    {
+      "image": "assets/img/enemy_p.png",
+      "pos": {
+        "x": 236,
+        "y": -20
+      },
+      "velocity": {
+        "x": -40,
+        "y": 25
+      }
+    },
+    {
+      "image": "assets/img/enemy_e.png",
+      "pos": {
+        "x": 20,
+        "y": -40
+      },
+      "velocity": {
+        "x": 40,
+        "y": 22
+      }
+    },
+    {
+      "image": "assets/img/enemy_i.png",
+      "pos": {
+        "x": 128,
+        "y": -120
+      },
+      "velocity": {
+        "x": 0,
+        "y": 30
+      }
+    },
+    {
+      "image": "assets/img/enemy_p.png",
+      "pos": {
+        "x": 20,
+        "y": -90
+      },
+      "velocity": {
+        "x": 45,
+        "y": 12
+      }
+    },
+    {
+      "image": "assets/img/enemy_e.png",
+      "pos": {
+        "x": 128,
+        "y": -170
+      },
+      "velocity": {
+        "x": 0,
+        "y": 30
+      }
+    }
+  ]
+}
