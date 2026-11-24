@@ -1,0 +1,30 @@
+{
+  "music": "VICTORY",
+  "accept_delay": 1.5,
+  "title": {
+    "text": "NUEVO RECORD",
+    "anchor": { "x": 128, "y": 56 },
+    "alignment": "CENTER",
+    "color": { "r": 255, "g": 230, "b": 80 },
+    "blink": 0.4
+  },
+  "subtitle": {
+    "text": "FELICITACIONES, SUPERASTE EL HI-SCORE",
+    "anchor": { "x": 128, "y": 76 },
+    "alignment": "CENTER",
+    "color": { "r": 255, "g": 255, "b": 255 }
+  },
+  "stats": {
+    "anchor": { "x": 128, "y": 112 },
+    "line_height": 16,
+    "alignment": "CENTER",
+    "color": { "r": 255, "g": 60, "b": 60 },
+    "text": ["TU PUNTAJE: {score}", "NUEVO HI-SCORE: {hi_score}"]
+  },
+  "hint": {
+    "text": "Z: CONTINUAR",
+    "anchor": { "x": 128, "y": 188 },
+    "alignment": "CENTER",
+    "color": { "r": 120, "g": 120, "b": 120 }
+  }
+}

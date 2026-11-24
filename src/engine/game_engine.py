@@ -7,6 +7,7 @@ from src.engine.scenes.scene import Scene
 from src.engine.service_locator import ServiceLocator
 from src.scenes.defeat_scene import DefeatScene
 from src.scenes.play_scene import PlayScene
+from src.scenes.record_scene import RecordScene
 from src.scenes.text_scene import TextScene
 from src.scenes.title_scene import TitleScene
 from src.scenes.victory_scene import VictoryScene
@@ -49,6 +50,7 @@ class GameEngine:
             "play": PlayScene(self),
             "defeat": DefeatScene(self),
             "victory": VictoryScene(self),
+            "record": RecordScene(self),
         }
         self._current_scene: Scene | None = None
         self._scene_name_to_switch: str | None = None
