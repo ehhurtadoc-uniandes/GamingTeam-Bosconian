@@ -252,8 +252,8 @@ class TestAimDelE(CoreTestCase):
 
     def test_apunta_al_jugador_en_el_mismo_paso_y_mantiene_el_rumbo(self):
         enemy = self.launch()
-        # system_enemy_state compara esquinas: la del E está en (96, 76).
-        system_enemy_state(self.world, 0.0, pygame.Vector2(196, 76), WORLD_SIZE)
+        # system_enemy_state compara esquinas: la del E está en (90, 70).
+        system_enemy_state(self.world, 0.0, pygame.Vector2(190, 70), WORLD_SIZE)
         self.assertEqual(self.world.component_for_entity(enemy, CEnemyState).state, EnemyState.STRAIGHT)
         vel = self.world.component_for_entity(enemy, CVelocity).vel
         self.assertGreater(vel.x, 0)

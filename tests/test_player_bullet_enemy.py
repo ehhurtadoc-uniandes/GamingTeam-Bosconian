@@ -145,7 +145,7 @@ class TestBalaDelJugadorContraEnemigos(PlayerBulletEnemyTestCase):
 
     def test_mata_cruzando_el_borde_del_mundo(self):
         world_size = V(100, 100)
-        enemy = self.enemy(V(0, 50))
+        enemy = self.enemy(V(-6, 44))
         create_player_bullet(self.world, BULLET_INFO, V(99.8, 54), V(1, 0))
         system_player_bullet_enemy(self.world)
         self.assertTrue(self.world.entity_exists(enemy))
@@ -161,7 +161,7 @@ class TestOrdenConLasBases(PlayerBulletEnemyTestCase):
         base = create_base(self.world, base_info, V(300, 400), BaseOrientation.HORIZONTAL)
         turret = self.world.component_for_entity(base, CBase).turrets[0]
         turret_center = self.center(turret)
-        enemy = self.enemy(turret_center - V(4, 4))
+        enemy = self.enemy(turret_center - V(10, 10))
         create_player_bullet(self.world, BULLET_INFO, turret_center, V(1, 0))
         # El mismo orden que en PlayScene: primero los enemigos, después las bases.
         system_player_bullet_enemy(self.world)

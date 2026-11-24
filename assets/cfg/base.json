@@ -1,42 +1,47 @@
 {
   "body": {
-    "size": { "w": 64, "h": 40 },
+    "image": "assets/img/base_body.png",
+    "size": { "w": 64, "h": 72 },
     "color": { "r": 60, "g": 140, "b": 60 }
   },
   "core": {
-    "size": { "w": 12, "h": 12 },
+    "size": { "w": 20, "h": 20 },
     "color": { "r": 255, "g": 60, "b": 160 },
-    "hitbox": { "size": { "w": 8, "h": 8 } },
+    "hitbox": { "size": { "w": 12, "h": 12 } },
     "offset": { "x": 0, "y": 0 },
     "durations": { "closed": 3.0, "opening": 0.6, "open": 1.0, "closing": 0.6 },
     "states": {
-      "closed": { "size": { "w": 6, "h": 6 }, "color": { "r": 110, "g": 40, "b": 90 } },
-      "opening": { "size": { "w": 9, "h": 9 }, "color": { "r": 255, "g": 200, "b": 80 } },
-      "open": { "color": { "r": 255, "g": 60, "b": 160 } },
-      "closing": { "size": { "w": 9, "h": 9 }, "color": { "r": 255, "g": 120, "b": 40 } }
+      "closed": { "image": "assets/img/core_closed.png" },
+      "opening": { "image": "assets/img/core_opening.png" },
+      "open": { "image": "assets/img/core_open.png" },
+      "closing": { "image": "assets/img/core_closing.png" }
     }
   },
   "turret": {
-    "size": { "w": 10, "h": 10 },
+    "image": "assets/img/turret_closed.png",
+    "open_image": "assets/img/turret_open.png",
+    "size": { "w": 16, "h": 16 },
     "color": { "r": 200, "g": 220, "b": 200 },
-    "hitbox": { "size": { "w": 8, "h": 8 } },
+    "hitbox": { "size": { "w": 12, "h": 12 } },
     "open_color": { "r": 255, "g": 140, "b": 40 },
     "activation_distance": 90,
     "fire_interval": { "min": 1.2, "max": 2.4 }
   },
   "bullet": {
-    "size": { "w": 3, "h": 3 },
+    "image": "assets/img/turret_bullet.png",
+    "size": { "w": 6, "h": 4 },
+    "hitbox": { "size": { "w": 3, "h": 3 } },
     "color": { "r": 255, "g": 230, "b": 120 },
     "speed": 25,
     "lifetime": 7.0
   },
   "points": { "turret": 200, "base": 1500 },
   "turret_offsets": [
-    { "x": 0, "y": -20 },
-    { "x": 17, "y": -10 },
-    { "x": 17, "y": 10 },
-    { "x": 0, "y": 20 },
-    { "x": -17, "y": 10 },
-    { "x": -17, "y": -10 }
+    { "x": 0, "y": -28 },
+    { "x": 24, "y": -12 },
+    { "x": 24, "y": 12 },
+    { "x": 0, "y": 28 },
+    { "x": -24, "y": 12 },
+    { "x": -24, "y": -12 }
   ]
 }
