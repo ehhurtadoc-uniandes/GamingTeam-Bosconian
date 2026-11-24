@@ -29,6 +29,7 @@ class GameStateService:
         self.level_index = 0
         self.continues_used = 0
         self.lives_lost = 0
+        self.attract = False
         self._lives_info: dict = {}
 
     def load(self, score_info: dict) -> None:

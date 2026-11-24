@@ -2,7 +2,7 @@ from src.create.prefab_menu import create_menu, update_menu_values
 from src.ecs.components.c_input_command import CInputCommand, CommandPhase
 from src.ecs.systems.s_menu import move_menu_selection, move_selection, selected_action, system_menu_highlight
 from src.engine.service_locator import ServiceLocator
-from src.scenes.menu_scene import MenuScene
+from src.scenes.menu_scene import MenuScene, is_user_input
 
 
 class TitleScene(MenuScene):
@@ -14,9 +14,12 @@ class TitleScene(MenuScene):
 
     def __init__(self, game_engine) -> None:
         super().__init__(game_engine, ServiceLocator.constants_service.title_config)
+        self.idle_time = 0.0
 
     def do_create_menu(self) -> None:
         constants = ServiceLocator.constants_service
+        self.idle_time = 0.0
+        ServiceLocator.game_state_service.attract = False
         self._level_count = len(ServiceLocator.configs_service.get(constants.levels_config)["levels"])
         create_menu(self.ecs_world, self._config["menu"], self._menu_values())
 
@@ -27,6 +30,13 @@ class TitleScene(MenuScene):
     def do_update(self, delta_time: float) -> None:
         super().do_update(delta_time)
         system_menu_highlight(self.ecs_world)
+        self.idle_time += delta_time
+        if self.idle_time >= self._config["attract_after"]:
+            self.switch_scene(ServiceLocator.constants_service.demo_scene)
+
+    def do_process_events(self, event) -> None:
+        if is_user_input(event):
+            self.idle_time = 0.0
 
     def do_action(self, action: CInputCommand) -> None:
         if action.phase != CommandPhase.START:

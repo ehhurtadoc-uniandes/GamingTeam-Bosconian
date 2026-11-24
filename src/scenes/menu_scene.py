@@ -10,6 +10,13 @@ from src.engine.scenes.scene import Scene
 from src.engine.service_locator import ServiceLocator
 
 
+USER_INPUT_EVENTS = (pygame.KEYDOWN, pygame.MOUSEBUTTONDOWN, pygame.JOYBUTTONDOWN, pygame.JOYHATMOTION)
+
+
+def is_user_input(event: pygame.event.Event) -> bool:
+    return event.type in USER_INPUT_EVENTS
+
+
 class MenuScene(Scene):
     """Base de las escenas fuera del juego (título, instrucciones, créditos).
 
