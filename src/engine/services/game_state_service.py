@@ -29,6 +29,8 @@ class GameStateService:
         self.level_index = 0
         self.continues_used = 0
         self.lives_lost = 0
+        self.record_broken = False
+        self.after_record = ""
         self._lives_info: dict = {}
 
     def load(self, score_info: dict) -> None:
@@ -42,6 +44,7 @@ class GameStateService:
         self._reset_run()
         self.continues_used = 0
         self.lives_lost = 0
+        self.record_broken = False
 
     def continue_game(self) -> None:
         """Continuar tras la derrota (LC-ESC-06.2): recupera todas las vidas y pierde todo el puntaje.
@@ -72,7 +75,9 @@ class GameStateService:
         Cada umbral de vida extra que se cruce da una vida (LC-VID-02), aunque se crucen varios a la vez.
         """
         self.score += points
-        self.hi_score = max(self.hi_score, self.score)
+        if self.score > self.hi_score:
+            self.record_broken = True
+            self.hi_score = self.score
         every = self._lives_info["extra_life"]["every"]
         if self.score >= self.next_extra_life:
             # Import local: ServiceLocator importa este módulo.
@@ -81,6 +86,13 @@ class GameStateService:
         while self.score >= self.next_extra_life:
             self.lives += 1
             self.next_extra_life = next_extra_life_after(self.next_extra_life, every)
+
+    def route_end(self, destination: str, record_scene: str) -> str:
+        if not self.record_broken:
+            return destination
+        self.record_broken = False
+        self.after_record = destination
+        return record_scene
 
     def lose_life(self) -> bool:
         """Descuenta una vida al morir. Devuelve False si no quedaba reserva: la partida terminó."""

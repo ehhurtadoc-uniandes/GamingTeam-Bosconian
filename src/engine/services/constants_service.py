@@ -30,6 +30,7 @@ class ConstantsService:
         self.blast_off_config = "assets/cfg/blast_off.json"
         self.cheats_config = "assets/cfg/cheats.json"
         self.victory_config = "assets/cfg/victory.json"
+        self.record_config = "assets/cfg/record.json"
         self.sounds_config = "assets/cfg/sounds.json"
         self.pause_config = "assets/cfg/pause.json"
         self.explosions_config = "assets/cfg/explosions.json"
@@ -60,6 +61,7 @@ class ConstantsService:
         self.title_scene = "title"
         self.play_scene = "play"
         self.victory_scene = "victory"
+        self.record_scene = "record"
 
         # Dirección de cada comando de movimiento del jugador.
         self.direction_commands = {
