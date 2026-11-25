@@ -41,19 +41,23 @@ El objetivo académico es aplicar los conceptos vistos en el curso:
 
 ## Cómo ejecutar el juego
 
-> 🚧 **En construcción.** Estas instrucciones son tentativas y se actualizarán a medida que avance el proyecto.
+### Jugar en el navegador
 
-### Requisitos
+La versión web está publicada en itch.io y se actualiza sola con cada cambio que entra a `main`:
 
-- Python 3.11 o superior
-- [Pygame](https://www.pygame.org/) (pygame-ce)
-- [Esper](https://pypi.org/project/esper/)
+**https://ehhurtadoc-uniandes.itch.io/bosconian**
+
+### Requisitos para escritorio
+
+- Python 3.12
+- [pygame-ce](https://pyga.me/) 2.5.8 (se instala con `requirements.txt`)
+- [Esper](https://github.com/benmoran56/esper) ya viene incluido en la carpeta `esper/` del repositorio, así que no hay que instalarlo.
 
 ### Instalación
 
 ```bash
-git clone <URL-DEL-REPOSITORIO>
-cd ProyectoFinal
+git clone https://github.com/ehhurtadoc-uniandes/GamingTeam-Bosconian.git
+cd GamingTeam-Bosconian
 
 python -m venv .venv
 # Windows
@@ -70,31 +74,36 @@ pip install -r requirements.txt
 python main.py
 ```
 
-### Ejecución en web
+### Ejecución web en local
 
-La versión web se construirá con [pygbag](https://pypi.org/project/pygbag/):
+La versión web se construye con [pygbag](https://pypi.org/project/pygbag/):
 
 ```bash
-pip install pygbag
-pygbag .
+pip install pygbag==0.9.2
+python -m pygbag .
 ```
 
 Luego hay que abrir `http://localhost:8000` en el navegador.
 
-### Versión publicada
+### Pruebas
 
-El juego se publicará en [itch.io](https://itch.io). Enlace: *pendiente*.
+```bash
+python -m unittest discover -s tests -t .
+```
 
 ## Controles
 
-> Tentativos.
+| Acción                   | Teclado                  | Gamepad                  |
+| ------------------------ | ------------------------ | ------------------------ |
+| Mover / cambiar dirección | Flechas (dos a la vez para diagonal) | Stick izquierdo o cruceta |
+| Disparar                 | `Z`                      | A / ✕                    |
+| Escudo (segunda habilidad) | `X`                    | B / ◯                    |
+| Pausa                    | `P` / `Esc`              | Start                    |
+| Menús: elegir            | Flechas                  | Stick o cruceta          |
+| Menús: aceptar           | `Z` / `Enter` / `Espacio` | A / ✕                   |
+| Menús: volver            | `Esc` / `X`              | B / ◯                    |
 
-| Acción                     | Teclado              | Gamepad          |
-| -------------------------- | -------------------- | ---------------- |
-| Cambiar dirección          | Flechas direccionales | Joystick izquierdo |
-| Disparar                   | `Z`                  | A / ✕            |
-| Segunda habilidad (bono)   | `X`                  | B / ◯            |
-| Pausa                      | `Esc` / `P`          | Start            |
+Si en el título no se toca nada durante 15 segundos, empieza el modo atractor: una demo y luego las instrucciones. Cualquier tecla vuelve al título.
 
 ## Modo trampa
 
